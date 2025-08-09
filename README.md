@@ -1,8 +1,12 @@
-# Zápočtový program: *název vašeho programu*
+# Zápočtový program: BiblioTrieca
 
 *Tento soubor slouží jako šablona. Vhodně ho upravte podle vašeho projektu. Text psaný kurzívou obsahuje instrukce pro vás – před odevzdáním je prosím odstraňte nebo nahraďte vlastním textem.*
 
 ## Specifikace
+
+Databázová knihovna obsluhující prefixové stromy (trie) a poskytující vývojářům solidní základ pro jejich další využití. Umožní jejich tvorbu, čtení i modifikaci, přičemž bude tyto úkony provádět efektivně.
+
+K základní funkcionalitě budou přidávány i pokročilejší metody, dokud knihovna nedosáhne požadované délky a úrovně.
 
 *Sem napište stručnou specifikaci vašeho programu – co váš program má dělat (podobně jako jste mi psali do mailu). Stačí zhruba 1–2 odstavce.*
 
