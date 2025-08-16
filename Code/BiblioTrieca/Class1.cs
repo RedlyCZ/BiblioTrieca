@@ -12,6 +12,8 @@ namespace BiblioTrieca
     }
 
     public class TrieInFile:TrieDatabase
+    //Holds records in file, some methods require something like log(keysize) memory in RAM (garbagecollect, autocomplete...)
+    //Includes simple cache, which is recommended, but due to prefix trees works very fast even without it
     {
         const int recordLength = 256;
         //(26 chars + 10 numericals) * 4B + 111B data = 256 B
@@ -466,5 +468,10 @@ namespace BiblioTrieca
             File.Move(adress + "_new", adress);
             this.nmbRecordsInDB = (uint)new System.IO.FileInfo(adress).Length / 256 -1;
         }
+    }
+
+    public class TrieInRAM
+    {
+
     }
 }
