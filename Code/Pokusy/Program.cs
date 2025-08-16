@@ -7,13 +7,12 @@ namespace Pokusy
         static void Main(string[] args)
         {
             Console.WriteLine("Testujeme program");
-            TrieInFile db = new TrieInFile("zkousime");
-            
-            
+            TrieInFile db = new TrieInFile("zkousim", 1);
+
             db.AddElement("a", [0xAE, 0x59, 0x48, 0xF5, 0x2A]);
             db.AddElement("", [0xBB]);
             db.AddElement("A5", [100, 15, 4]);
-            
+
             //Test 1
             byte[] data = db.ReadElement("a5");
             if (data[0] == 100 && data[1] == 15 && data[2] == 4 && data[3] == 0 && data[65] == 0)
@@ -79,7 +78,6 @@ namespace Pokusy
                 Console.WriteLine("Test 5 : Failed");
             }
 
-
             //Test 6
             db.AddElement("aut", [1]);
             db.AddElement("autarkie", [2]);
@@ -96,9 +94,8 @@ namespace Pokusy
             }
 
             //Test 7
-            db.RemoveBranch("aut");
-            if(db.ReadElement("aut")==null && db.ReadElement("autarkie") == null && db.ReadElement("auto") == null 
-                && db.ReadElement("automat") == null && db.ReadElement("autodrom") == null)
+            string[] autocompletions = db.AutoComplete("a", 4);
+            if (autocompletions[0]=="ab" && autocompletions[1] == "a52" && autocompletions[2] == "aut" && autocompletions[3] == "auto")
             {
                 Console.WriteLine("Test 7 : Passed");
             }
@@ -107,6 +104,62 @@ namespace Pokusy
                 Console.WriteLine("Test 7 : Failed");
             }
 
+
+            //Test 8
+            db.RemoveBranch("aut");
+            if(db.ReadElement("aut")==null && db.ReadElement("autarkie") == null && db.ReadElement("auto") == null 
+                && db.ReadElement("automat") == null && db.ReadElement("autodrom") == null)
+            {
+                Console.WriteLine("Test 8 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 8 : Failed");
+            }
+
+            //Test 8.5 - graphical
+            /**
+            db.AddElement("Jan", [24, 06]);
+            db.AddElement("Jaromir", [24, 09]);
+            db.AddElement("Jaroslav", [27, 04]);
+            db.AddElement("John", [24, 09, 14, 92]);
+            db.AddElement("Jonas", [60, 06, 05]);
+            db.ConsolePrint("", 8);
+            **/
+
+            //Test 8.75 - speed test
+            /**
+            var watch = new System.Diagnostics.Stopwatch();
+            db.AddElement("Nejneobhospodarovavatelnejsi", [1, 2, 3, 4]);
+            watch.Start();
+            db.ReadElement("Nejneobhospodarovavatelnejsi");
+            watch.Stop();
+            Console.WriteLine($"Cache hit ReadElement time: {watch.ElapsedTicks}");
+            watch.Restart();
+            watch.Start();
+            db.ReadTryCache("Nejneobhospodarovavatelnejsi");
+            watch.Stop();
+            Console.WriteLine($"Cache hit ReadElement time: {watch.ElapsedTicks}");
+            watch.Restart();
+            watch.Start();
+            db.ReadElement("Nejneobhospodarovavatelnejsi");
+            watch.Stop();
+            Console.WriteLine($"Cache hit ReadElement time: {watch.ElapsedTicks}");
+            **/
+
+            //Test 9
+            if (db.nmbRecordsInDB == 19)
+            {
+                db.GarbageCollector();
+                if (db.nmbRecordsInDB == 4)
+                {
+                    Console.WriteLine("Test 9 : Passed");
+                }
+                else
+                {
+                    Console.WriteLine("Test 9 : Failed");
+                }
+            }
 
         }
     }

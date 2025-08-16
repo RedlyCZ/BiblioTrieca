@@ -1,4 +1,7 @@
-﻿namespace BiblioTrieca
+﻿using System.Drawing;
+using System.IO;
+
+namespace BiblioTrieca
 {
     public interface TrieDatabase
     {
@@ -18,16 +21,34 @@
         string adress;
         public uint nmbRecordsInDB; //In reality is one less than the true number of records in DB, shows last active record index
 
+        int cacheSize;
+        string[] cacheKeys;
+        byte[][] cacheValues;
+        int activeCacheIndex = 0;
 
-        public TrieInFile(string adress)
+
+        public TrieInFile(string adress, int cacheSize = 0)
         {
             this.adress = adress;
-            this.nmbRecordsInDB = 0;
-            FileStream fileStream = new FileStream(adress, FileMode.Create, FileAccess.Write);
-            BinaryWriter writer = new BinaryWriter(fileStream);
-            writer.Write(emptyRecord);
-            writer.Close();
-            fileStream.Close();
+            this.cacheSize = cacheSize;
+            if (File.Exists(adress))
+            {
+                this.nmbRecordsInDB = (uint)new System.IO.FileInfo(adress).Length/256-1;
+            }
+            else
+            {
+                this.nmbRecordsInDB = 0;
+                FileStream fileStream = new FileStream(adress, FileMode.OpenOrCreate, FileAccess.Write);
+                BinaryWriter writer = new BinaryWriter(fileStream);
+                writer.Write(emptyRecord);
+                writer.Close();
+                fileStream.Close();
+            }
+            if (cacheSize != 0)
+            {
+                cacheKeys = new string[cacheSize];
+                cacheValues = new byte[cacheSize][];
+            }
         }
 
         private static int CharToIndex(char c)
@@ -164,6 +185,14 @@
                     byte[] recordData = reader.ReadBytes(111);
                     //111 is the number of data bytes in each record
                     reader.Close();
+
+                    //If cache is activated, then add this element to it
+                    if (cacheSize != 0)
+                    {
+                        activeCacheIndex = (activeCacheIndex + 1) % cacheSize;
+                        cacheKeys[activeCacheIndex] = key;
+                        cacheValues[activeCacheIndex] = recordData;
+                    }
                     return recordData;
                 }
                 else
@@ -173,6 +202,20 @@
                 }
                 
             }
+        }
+        
+        public byte[] ReadTryCache(string key)
+        {
+            //Go through cache keys and try to find cache hit
+            for (int i = 0; i < cacheSize; i++)
+            {
+                if (cacheKeys[i] == key)
+                {
+                    return cacheValues[i];
+                }
+            }
+            //If there isnt one then start standart procedure
+            return ReadElement(key);
         }
         
         public void RemoveElement(string key)
@@ -239,26 +282,33 @@
     
         public void RemoveBranch(string key)
         //Invalidates record with this key, and all records which start with this key (using BFS)
-        {
-            char[] arrayOfCharsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 
-                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
-            
-            System.Collections.Generic.Queue<string> bfsQueue = new Queue<string>();
-            bfsQueue.Enqueue(key);
+        {   
+            System.Collections.Generic.Queue<uint> bfsQueue = new Queue<uint>();
+            bfsQueue.Enqueue(KeyToRecordIndex(key));
 
             while (bfsQueue.Count > 0)
             {
-                string activeKey = bfsQueue.Dequeue();
-                this.RemoveElement(activeKey);
-                int[] childrenIndexes = this.ReadMetadata(activeKey);
-                for (int i = 1; i < childrenIndexes.Length; i++)
+                uint activeIndex = bfsQueue.Dequeue();
+                using (FileStream fileStream = new FileStream(adress, FileMode.Open, FileAccess.ReadWrite))
                 {
-                    if(childrenIndexes[i] != 0)
-                    //If there is a child on this record index
+                    BinaryReader reader = new BinaryReader(fileStream);
+                    BinaryWriter writer = new BinaryWriter(fileStream);
+
+                    //First clear indication byte of this record
+                    fileStream.Position = activeIndex*recordLength + 36*4;
+                    writer.Write((byte)0);
+
+                    //Then load info about this records children and add to queue
+                    fileStream.Position = activeIndex*recordLength;
+                    for (int i = 0; i<36; i++)
                     {
-                        string newKey = activeKey + arrayOfCharsInRecord[i-1];
-                        bfsQueue.Enqueue(newKey);
+                        uint childIndex = reader.ReadUInt32();
+                        if(childIndex != 0)
+                        {
+                            bfsQueue.Enqueue((uint)childIndex);
+                        }
                     }
+                    writer.Close();
                 }
             }
         }
@@ -267,32 +317,154 @@
         //Returns number of active (having data) records in this branch
         {
             uint size = 0;
-
-            char[] arrayOfCharsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
-                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
-
-            System.Collections.Generic.Queue<string> bfsQueue = new Queue<string>();
-            bfsQueue.Enqueue(key);
+            System.Collections.Generic.Queue<uint> bfsQueue = new Queue<uint>();
+            bfsQueue.Enqueue(KeyToRecordIndex(key));
 
             while (bfsQueue.Count > 0)
             {
-                string activeKey = bfsQueue.Dequeue();
-                int[] childrenIndexes = this.ReadMetadata(activeKey);
-                if(childrenIndexes[0] != 0)
+                uint activeIndex = bfsQueue.Dequeue();
+                using (FileStream fileStream = new FileStream(adress, FileMode.Open, FileAccess.Read))
                 {
-                    size++;
-                }
-                for (int i = 1; i < childrenIndexes.Length; i++)
-                {
-                    if (childrenIndexes[i] != 0)
-                    //If there is a child on this record index
+                    BinaryReader reader = new BinaryReader(fileStream);
+
+                    //First increment size if indication byte is set
+                    fileStream.Position = activeIndex * recordLength + 36 * 4;
+                    if(reader.ReadByte() != 0)
                     {
-                        string newKey = activeKey + arrayOfCharsInRecord[i - 1];
-                        bfsQueue.Enqueue(newKey);
+                        size++;
+                    }
+
+                    //Then load info about this records children and add to queue
+                    fileStream.Position = activeIndex * recordLength;
+                    for (int i = 0; i < 36; i++)
+                    {
+                        uint childIndex = reader.ReadUInt32();
+                        if (childIndex != 0)
+                        {
+                            bfsQueue.Enqueue((uint)childIndex);
+                        }
                     }
                 }
             }
             return size;
+        }
+    
+        public string[] AutoComplete(string key, int numberOfCompletions)
+        {
+            char[] charsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 
+                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+            
+            //For autocomplete not to return own value
+            numberOfCompletions++;
+
+            string[] completions = new string[numberOfCompletions];
+            int completed = 0;
+
+
+            System.Collections.Generic.Queue<string> bfsQueue = new Queue<string>();
+            bfsQueue.Enqueue(key);
+
+            while (bfsQueue.Count > 0 && completed<numberOfCompletions)
+            {
+                string activeKey = bfsQueue.Dequeue();
+                int[] activeMetas = this.ReadMetadata(activeKey);
+                
+                //Check if record is active (indication byte set)
+                if(activeMetas[0] == 1)
+                {
+                    //If so, add it to completions
+                    completions[completed] = activeKey;
+                    completed++;
+                }
+
+                //Then continue to children
+                for(int i = 1; i < activeMetas.Length; i++)
+                {
+                    if(activeMetas[i] != 0) //If child exists
+                    {
+                        bfsQueue.Enqueue(activeKey+charsInRecord[i-1]);
+                    }
+                }
+            }
+            return completions[1..];
+        }
+        
+        public void ConsolePrint(string key, int depth, int recursionDepth = 0)
+        //Uses DFS (recursional) to go through subtree and on its way draws the tree
+        //Only shows keys, because showing data was confusing, displays whether record has some data
+        {
+            char[] charsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
+                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+
+            for (int i = 0; i < recursionDepth; i++)
+            {
+                Console.Write("        |");
+            }
+            Console.Write("> - ");
+            Console.Write(key);
+            Console.Write(" - ");
+            if(this.ReadElement(key) != null)
+            {
+                Console.Write("HAS DATA\n");
+            }
+            else
+            {
+                Console.Write("NO DATA\n");
+            }
+            if(depth > 0)
+            {
+                int[] metas = this.ReadMetadata(key);
+                for (int i = 1; i < metas.Length; i++)
+                {
+                    if (metas[i] != 0) //If child exists
+                    {
+                        this.ConsolePrint(key + charsInRecord[i-1], depth-1, recursionDepth+1);
+                    }
+                }
+            }
+        }
+
+        
+        public void GarbageCollector()
+        //Goes through the file and copies all non-empty branches into a new file
+        //This way all records in empty branches are removed
+        {
+            char[] charsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
+                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+
+            //Create new trie
+            TrieInFile newTrie = new TrieInFile(adress + "_new");
+
+            //Now use BFS and add every active element from the old to the new trie
+            System.Collections.Generic.Queue<string> bfsQueue = new Queue<string>();
+            bfsQueue.Enqueue("");
+            while(bfsQueue.Count > 0)
+            {
+                string activeKey = bfsQueue.Dequeue();
+                int[] activeMetas = this.ReadMetadata(activeKey);
+                byte[] activeData = this.ReadElement(activeKey);
+
+                //Check if record is active (indication byte set)
+                if (activeMetas[0] == 1)
+                {
+                    //If so, add it to the new trie
+                    newTrie.AddElement(activeKey, activeData);
+                }
+
+                for (int i = 1; i < 36; i++)
+                {
+                    if (activeMetas[i] != 0) //If child exists
+                    {
+                        bfsQueue.Enqueue(activeKey + charsInRecord[i - 1]);
+                    }
+                }
+            }
+
+            //Now we have new file created which is garbage collected version of the old one
+            //We delete the old one and rename the new to the old
+            File.Delete(adress);
+            File.Move(adress + "_new", adress);
+            this.nmbRecordsInDB = (uint)new System.IO.FileInfo(adress).Length / 256 -1;
         }
     }
 }
