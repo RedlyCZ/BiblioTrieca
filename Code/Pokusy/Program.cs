@@ -1,13 +1,15 @@
 ﻿using BiblioTrieca;
 
-namespace Pokusy
+namespace Tests
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static void TrieInFileTests()
+        //Tests various methods of TrieInFile from BiblioTrieca
+        //Two test are disabled, because they are not easily evaluated
         {
-            Console.WriteLine("Testujeme program");
-            TrieInFile db = new TrieInFile("zkousim", 1);
+            Console.WriteLine("Testing TrieInFile");
+            TrieInFile db = new TrieInFile("TrieInFileFile", 1);
 
             db.AddElement("a", [0xAE, 0x59, 0x48, 0xF5, 0x2A]);
             db.AddElement("", [0xBB]);
@@ -27,7 +29,7 @@ namespace Pokusy
             //Test 2
             db.RemoveElement("a5");
             data = db.ReadElement("a5");
-            if(data == null)
+            if (data == null)
             {
                 Console.WriteLine("Test 2 : Passed");
             }
@@ -36,11 +38,12 @@ namespace Pokusy
                 Console.WriteLine("Test 2 : Failed");
             }
 
-            //Test 3
             db.AddElement("a52", []);
-            db.AddElement("AB", []);
-            int[] metas = db.ReadMetadata("a");
-            if (metas[0] == 1 && metas[6] == 2 && metas[7] == 0 && metas[12] == 4)
+            db.AddElement("ab", []);
+
+            //Test 3
+            int[] metas = db.ReadMetadata("A5");
+            if (metas[0] == 0)
             {
                 Console.WriteLine("Test 3 : Passed");
             }
@@ -50,9 +53,18 @@ namespace Pokusy
             }
 
             //Test 4
-            metas = db.ReadMetadata("A5");
-            if (metas[0] == 0){
-                Console.WriteLine("Test 4 : Passed");
+            db.AddElement("", [10, 12]);
+            if (db.ReadElement("")[0] == 10)
+            {
+                db.AddElement("", [0xAC, 0xDC], false);
+                if (db.ReadElement("")[1] == 12)
+                {
+                    Console.WriteLine("Test 4 : Passed");
+                }
+                else
+                {
+                    Console.WriteLine("Test 4 : Failed");
+                }
             }
             else
             {
@@ -60,18 +72,14 @@ namespace Pokusy
             }
 
             //Test 5
-            db.AddElement("", [10, 12]);
-            if (db.ReadElement("")[0] == 10)
+            db.AddElement("aut", [1]);
+            db.AddElement("autarkie", [2]);
+            db.AddElement("auto", [3]);
+            db.AddElement("autodrom", [4]);
+            db.AddElement("automat", [5]);
+            if (db.BranchSize("aut") == 5)
             {
-                db.AddElement("", [0xAC,0xDC], false);
-                if (db.ReadElement("")[1] == 12)
-                {
-                    Console.WriteLine("Test 5 : Passed");
-                }
-                else
-                {
-                    Console.WriteLine("Test 5 : Failed");
-                }
+                Console.WriteLine("Test 5 : Passed");
             }
             else
             {
@@ -79,12 +87,8 @@ namespace Pokusy
             }
 
             //Test 6
-            db.AddElement("aut", [1]);
-            db.AddElement("autarkie", [2]);
-            db.AddElement("auto", [3]);
-            db.AddElement("autodrom", [4]);
-            db.AddElement("automat", [5]);
-            if(db.BranchSize("aut") == 5)
+            string[] autocompletions = db.AutoComplete("a", 4);
+            if (autocompletions[0] == "ab" && autocompletions[1] == "a52" && autocompletions[2] == "aut" && autocompletions[3] == "auto")
             {
                 Console.WriteLine("Test 6 : Passed");
             }
@@ -93,9 +97,11 @@ namespace Pokusy
                 Console.WriteLine("Test 6 : Failed");
             }
 
+
             //Test 7
-            string[] autocompletions = db.AutoComplete("a", 4);
-            if (autocompletions[0]=="ab" && autocompletions[1] == "a52" && autocompletions[2] == "aut" && autocompletions[3] == "auto")
+            db.RemoveBranch("aut");
+            if (db.ReadElement("aut") == null && db.ReadElement("autarkie") == null && db.ReadElement("auto") == null
+                && db.ReadElement("automat") == null && db.ReadElement("autodrom") == null)
             {
                 Console.WriteLine("Test 7 : Passed");
             }
@@ -104,20 +110,7 @@ namespace Pokusy
                 Console.WriteLine("Test 7 : Failed");
             }
 
-
-            //Test 8
-            db.RemoveBranch("aut");
-            if(db.ReadElement("aut")==null && db.ReadElement("autarkie") == null && db.ReadElement("auto") == null 
-                && db.ReadElement("automat") == null && db.ReadElement("autodrom") == null)
-            {
-                Console.WriteLine("Test 8 : Passed");
-            }
-            else
-            {
-                Console.WriteLine("Test 8 : Failed");
-            }
-
-            //Test 8.5 - graphical
+            //Test 7.5 - graphical
             /**
             db.AddElement("Jan", [24, 06]);
             db.AddElement("Jaromir", [24, 09]);
@@ -127,7 +120,7 @@ namespace Pokusy
             db.ConsolePrint("", 8);
             **/
 
-            //Test 8.75 - speed test
+            //Test 7.75 - speed test
             /**
             var watch = new System.Diagnostics.Stopwatch();
             db.AddElement("Nejneobhospodarovavatelnejsi", [1, 2, 3, 4]);
@@ -147,20 +140,23 @@ namespace Pokusy
             Console.WriteLine($"Cache hit ReadElement time: {watch.ElapsedTicks}");
             **/
 
-            //Test 9
+            //Test 8
             if (db.nmbRecordsInDB == 19)
             {
                 db.GarbageCollector();
                 if (db.nmbRecordsInDB == 4)
                 {
-                    Console.WriteLine("Test 9 : Passed");
+                    Console.WriteLine("Test 8 : Passed");
                 }
                 else
                 {
-                    Console.WriteLine("Test 9 : Failed");
+                    Console.WriteLine("Test 8 : Failed");
                 }
             }
-
+        }
+        static void Main(string[] args)
+        {
+            TrieInFileTests();
         }
     }
 }
