@@ -5,7 +5,7 @@ VisualStudioVersion = 17.11.35312.102
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BiblioTrieca", "BiblioTrieca\BiblioTrieca.csproj", "{E02625C1-E628-4FAB-9461-98E91CDAEAB4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pokusy", "Pokusy\Pokusy.csproj", "{B604FA27-897F-49B4-A322-5B2640656633}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests", "Pokusy\Tests.csproj", "{B604FA27-897F-49B4-A322-5B2640656633}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
