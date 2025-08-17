@@ -154,9 +154,91 @@ namespace Tests
                 }
             }
         }
+
+        static void TrieInRamTests()
+        {
+            Console.WriteLine("Testing TrieInRAM");
+            TrieInRAM db2 = new TrieInRAM();
+
+            //Test 1
+            db2.AddElement("aho j", [14, 15, 19, 45]);
+            byte[] data = db2.ReadElement("aho j");
+            if (data[0] == 14 && data[2] == 19 && data[3] == 45)
+            {
+                Console.WriteLine("Test 1 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 1 : Failed");
+            }
+
+            //Test 2
+            db2.AddElement("ahojda", [55]);
+            db2.RemoveElement("aho j");
+            if(db2.ReadElement("aho j") == null)
+            {
+                Console.WriteLine("Test 2 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 2 : Failed");
+            }
+
+            //Test 3
+            db2.AddElement("pot", [1]);
+            db2.AddElement("po tom", [2]);
+            db2.AddElement("pote", [3]);
+            db2.AddElement("potomek", [4]);
+            int a = db2.Branchsize("pot");
+            if (db2.Branchsize("pot") == 3) 
+            {
+                Console.WriteLine("Test 3 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 3 : Failed");
+            }
+
+            //Test 4
+            string[] completed = db2.AutoComplete("poto", 3);
+            if (completed[0] == "potomek" && completed[2] == null)
+            {
+                Console.WriteLine("Test 4 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 4 : Failed");
+            }
+
+            db2.AddElement("polak", []);
+
+            //Test 5
+            db2.RemoveBranch("pot");
+            if (db2.ReadElement("pot") == null && db2.ReadElement("pote") == null && db2.ReadElement("potomek") == null)
+            {
+                Console.WriteLine("Test 5 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 5 : Failed");
+            }
+
+            //Test 5.25
+            //db2.ConsolePrint("", 6);
+
+            //Test 5.5
+            //db2.GarbageCollect();
+
+            //Test 5.75
+            //db2.ConsolePrint("", 6);
+
+        }
+
+
         static void Main(string[] args)
         {
             TrieInFileTests();
+            TrieInRamTests();
         }
     }
 }
