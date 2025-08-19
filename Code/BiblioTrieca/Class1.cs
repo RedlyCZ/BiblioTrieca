@@ -15,9 +15,12 @@ namespace BiblioTrieca
     //Includes simple cache, which is recommended, but due to prefix trees works very fast even without it
     {
         const int recordLength = 256;
-        //(26 chars + 10 numericals + space) * 4B + 107B data = 256 B
+        //(26 chars + 10 numericals + space) * 4B + activation Byte + 107B data = 256 B
 
-        byte[] emptyRecord = new byte[256];
+        char[] charsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
+                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ' '];
+
+        byte[] emptyRecord = new byte[recordLength];
 
         string adress;
         public uint nmbRecordsInDB; //In reality is one less than the true number of records in DB, shows last active record index
@@ -34,7 +37,7 @@ namespace BiblioTrieca
             this.cacheSize = cacheSize;
             if (File.Exists(adress))
             {
-                this.nmbRecordsInDB = (uint)new System.IO.FileInfo(adress).Length / 256 - 1;
+                this.nmbRecordsInDB = (uint)new System.IO.FileInfo(adress).Length / recordLength - 1;
             }
             else
             {
@@ -108,60 +111,69 @@ namespace BiblioTrieca
 
         public void AddElement(string key, byte[] data, bool replace = true)
         {
-            uint activeRecordIndex = 0;
-            using (FileStream fileStream = new FileStream(adress, FileMode.Open, FileAccess.ReadWrite))
+            if (data.Length <= recordLength - 4 * charsInRecord.Length - 1)
+            //If data fits in the record
             {
-                BinaryWriter writer = new BinaryWriter(fileStream);
-                BinaryReader reader = new BinaryReader(fileStream);
+                uint activeRecordIndex = 0;
+                using (FileStream fileStream = new FileStream(adress, FileMode.Open, FileAccess.ReadWrite))
+                {
+                    BinaryWriter writer = new BinaryWriter(fileStream);
+                    BinaryReader reader = new BinaryReader(fileStream);
 
-                //First navigate to the destination and create records on the way if necessary
-                //KeyToIndexRecordIndex cant be used, because here we also need to create new records in the navigation process
-                for (int keyCharIndex = 0; keyCharIndex < key.Length; keyCharIndex++)
-                {
-                    char activeChar = key[keyCharIndex];
-                    long charDataByteOffset = CharToIndex(activeChar) * 4 + activeRecordIndex * recordLength;
-                    fileStream.Position = charDataByteOffset;
-                    uint nextRecordIndex = Convert.ToUInt32(reader.ReadInt32());
-                    if (nextRecordIndex == 0)
-                    //If there is no record that continues this way, we have to create it
+                    //First navigate to the destination and create records on the way if necessary
+                    //KeyToIndexRecordIndex cant be used, because here we also need to create new records in the navigation process
+                    for (int keyCharIndex = 0; keyCharIndex < key.Length; keyCharIndex++)
                     {
-                        //First update metas in old record
+                        char activeChar = key[keyCharIndex];
+                        long charDataByteOffset = CharToIndex(activeChar) * 4 + activeRecordIndex * recordLength;
                         fileStream.Position = charDataByteOffset;
-                        writer.Write(nmbRecordsInDB + 1);
-                        //Move to end of file
-                        fileStream.Position = nmbRecordsInDB * recordLength + recordLength;
-                        //Create new empty record
-                        writer.Write(emptyRecord);
-                        nmbRecordsInDB++;
-                        activeRecordIndex = nmbRecordsInDB;
+                        uint nextRecordIndex = Convert.ToUInt32(reader.ReadInt32());
+                        if (nextRecordIndex == 0)
+                        //If there is no record that continues this way, we have to create it
+                        {
+                            //First update metas in old record
+                            fileStream.Position = charDataByteOffset;
+                            writer.Write(nmbRecordsInDB + 1);
+                            //Move to end of file
+                            fileStream.Position = nmbRecordsInDB * recordLength + recordLength;
+                            //Create new empty record
+                            writer.Write(emptyRecord);
+                            nmbRecordsInDB++;
+                            activeRecordIndex = nmbRecordsInDB;
+                        }
+                        else
+                        //If there is, then just continue to it
+                        {
+                            activeRecordIndex = nextRecordIndex;
+                        }
                     }
-                    else
-                    //If there is, then just continue to it
+                    //Jump to the data section of the record
+                    fileStream.Position = activeRecordIndex * recordLength + 4 * charsInRecord.Length;
+                    byte indicationByte = reader.ReadByte();
+                    if (indicationByte == 0)
                     {
-                        activeRecordIndex = nextRecordIndex;
-                    }
-                }
-                //Jump to the data section of the record
-                fileStream.Position = activeRecordIndex * recordLength + 4 * 37;
-                byte indicationByte = reader.ReadByte();
-                if (indicationByte == 0)
-                {
-                    //Set the indication byte
-                    fileStream.Position = activeRecordIndex * recordLength + 4 * 37;
-                    writer.Write((byte)1);
-                    //Then write the data in designated record
-                    writer.Write(data);
-                }
-                else
-                {
-                    if (replace)
-                    {
+                        //Set the indication byte
+                        fileStream.Position = activeRecordIndex * recordLength + 4 * charsInRecord.Length;
+                        writer.Write((byte)1);
+                        //Then write the data in designated record
                         writer.Write(data);
                     }
+                    else
+                    {
+                        if (replace)
+                        {
+                            writer.Write(data);
+                        }
+                    }
+                    writer.Close();
+                    reader.Close();
                 }
-                writer.Close();
-                reader.Close();
             }
+            else
+            {
+                throw new Exception("Not enough space in record, potentional data overflow");
+            }
+            
         }
 
         public byte[] ReadElement(string key)
@@ -182,13 +194,13 @@ namespace BiblioTrieca
                 }
 
                 //Jump to data section of the record
-                fileStream.Position = activeRecordIndex * recordLength + 4 * 37;
+                fileStream.Position = activeRecordIndex * recordLength + 4 * charsInRecord.Length;
                 if (reader.ReadByte() == 1)
                 //If the record isnt deleted -> its indication byte is set
                 {
                     //Then read data from the record
-                    byte[] recordData = reader.ReadBytes(107);
-                    //111 is the number of data bytes in each record
+                    byte[] recordData = reader.ReadBytes(recordLength-4*charsInRecord.Length-1);
+                    //calculated number is the number of data bytes in each record
                     reader.Close();
 
                     //If cache is activated, then add this element to it
@@ -238,7 +250,7 @@ namespace BiblioTrieca
                 //If record exists
                 {
                     //Jump to data section of the record
-                    fileStream.Position = activeRecordIndex * recordLength + 4 * 37;
+                    fileStream.Position = activeRecordIndex * recordLength + 4 * charsInRecord.Length;
                     //Clear the indication byte
                     writer.Write((byte)0);
                     reader.Close();
@@ -259,7 +271,7 @@ namespace BiblioTrieca
             {
                 BinaryReader reader = new BinaryReader(fileStream);
 
-                int[] metas = new int[38];
+                int[] metas = new int[1+charsInRecord.Length];
 
                 if (activeRecordIndex == 0 && key != "")
                 //If record doesnt exist
@@ -270,11 +282,11 @@ namespace BiblioTrieca
                 else
                 {
                     //Jump to the indication byte section of the record
-                    fileStream.Position = activeRecordIndex * recordLength + 37 * 4;
+                    fileStream.Position = activeRecordIndex * recordLength + 4*charsInRecord.Length;
                     metas[0] = Convert.ToInt32(reader.ReadByte());
                     //Jump to the metadata section of the record
                     fileStream.Position = activeRecordIndex * recordLength;
-                    for (int i = 0; i < 37; i++)
+                    for (int i = 0; i < charsInRecord.Length; i++)
                     {
                         metas[i + 1] = reader.ReadInt32();
                     }
@@ -300,12 +312,12 @@ namespace BiblioTrieca
                     BinaryWriter writer = new BinaryWriter(fileStream);
 
                     //First clear indication byte of this record
-                    fileStream.Position = activeIndex * recordLength + 37 * 4;
+                    fileStream.Position = activeIndex * recordLength + 4 * charsInRecord.Length;
                     writer.Write((byte)0);
 
                     //Then load info about this records children and add to queue
                     fileStream.Position = activeIndex * recordLength;
-                    for (int i = 0; i < 37; i++)
+                    for (int i = 0; i < charsInRecord.Length; i++)
                     {
                         uint childIndex = reader.ReadUInt32();
                         if (childIndex != 0)
@@ -333,7 +345,7 @@ namespace BiblioTrieca
                     BinaryReader reader = new BinaryReader(fileStream);
 
                     //First increment size if indication byte is set
-                    fileStream.Position = activeIndex * recordLength + 37 * 4;
+                    fileStream.Position = activeIndex * recordLength + 4* charsInRecord.Length;
                     if (reader.ReadByte() != 0)
                     {
                         size++;
@@ -341,7 +353,7 @@ namespace BiblioTrieca
 
                     //Then load info about this records children and add to queue
                     fileStream.Position = activeIndex * recordLength;
-                    for (int i = 0; i < 37; i++)
+                    for (int i = 0; i < charsInRecord.Length; i++)
                     {
                         uint childIndex = reader.ReadUInt32();
                         if (childIndex != 0)
@@ -356,9 +368,6 @@ namespace BiblioTrieca
 
         public string[] AutoComplete(string key, int numberOfCompletions)
         {
-            char[] charsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
-                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
-
             //For autocomplete not to return own value
             if (this.ReadMetadata(key)[0] == 1)
             {
@@ -385,7 +394,7 @@ namespace BiblioTrieca
                 }
 
                 //Then continue to children
-                for (int i = 1; i < 37; i++)
+                for (int i = 1; i < activeMetas.Length; i++)
                 {
                     if (activeMetas[i] != 0) //If child exists
                     {
@@ -404,9 +413,6 @@ namespace BiblioTrieca
         //Uses DFS (recursional) to go through subtree and on its way draws the tree
         //Only shows keys, because showing data was confusing, displays whether record has some data
         {
-            char[] charsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
-                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ' '];
-
             for (int i = 0; i < recursionDepth; i++)
             {
                 Console.Write("        |");
@@ -439,9 +445,6 @@ namespace BiblioTrieca
         //Goes through the file and copies all non-empty branches into a new file
         //This way all records in empty branches are removed
         {
-            char[] charsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
-                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ' '];
-
             //Create new trie
             TrieInFile newTrie = new TrieInFile(adress + "_new");
 
@@ -461,7 +464,7 @@ namespace BiblioTrieca
                     newTrie.AddElement(activeKey, activeData);
                 }
 
-                for (int i = 1; i < 37; i++)
+                for (int i = 1; i < activeMetas.Length; i++)
                 {
                     if (activeMetas[i] != 0) //If child exists
                     {
@@ -474,7 +477,7 @@ namespace BiblioTrieca
             //We delete the old one and rename the new to the old
             File.Delete(adress);
             File.Move(adress + "_new", adress);
-            this.nmbRecordsInDB = (uint)new System.IO.FileInfo(adress).Length / 256 - 1;
+            this.nmbRecordsInDB = (uint)new System.IO.FileInfo(adress).Length / recordLength - 1;
         }
     }
 
@@ -486,12 +489,18 @@ namespace BiblioTrieca
             public Record[] children;
             public bool active;
 
+            char[] charsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
+                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ' '];
+
             public Record()
             {
-                this.children = new Record[37]; //26 characters + 10 numericals + space
+                this.children = new Record[charsInRecord.Length];
                 this.active = false;
             }
         }
+
+        char[] charsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
+                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ' '];
 
         Record root = new Record(); //Root of trie, representing ""
         private static int CharToIndex(char c)
@@ -589,7 +598,7 @@ namespace BiblioTrieca
                 activeRecord.active = false;
                 activeRecord.data = null;
                 //Then continue to its children
-                for (int i = 0; i < 37; i++)
+                for (int i = 0; i < charsInRecord.Length; i++)
                 {
                     if (activeRecord.children[i] != null)
                     {
@@ -614,7 +623,7 @@ namespace BiblioTrieca
                 {
                     branchSize++;
                 }
-                for (int i = 0; i < 37; i++)
+                for (int i = 0; i < charsInRecord.Length; i++)
                 {
                     if (activeRecord.children[i] != null)
                     {
@@ -632,9 +641,6 @@ namespace BiblioTrieca
                 numberOfCompletions++; //For it not to count key itself
             }
 
-            char[] charsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
-                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ' '];
-
             int completed = 0;
             string[] completions = new string[numberOfCompletions];
 
@@ -651,7 +657,7 @@ namespace BiblioTrieca
                     completions[completed] = activeKey;
                     completed++;
                 }
-                for (int i = 0; i < 37; i++)
+                for (int i = 0; i < charsInRecord.Length; i++)
                 {
                     if (activeRecord.children[i] != null)
                     {
@@ -671,9 +677,6 @@ namespace BiblioTrieca
         //Uses DFS (recursional) to go through subtree and on its way draws the tree
         //Only shows keys, because showing data was confusing, displays whether record has some data
         {
-            char[] charsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
-                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ' '];
-
             for (int i = 0; i < recursionDepth; i++)
             {
                 Console.Write("        |");
@@ -692,7 +695,7 @@ namespace BiblioTrieca
             }
             if (depth > 0)
             {
-                for (int i = 0; i < 37; i++)
+                for (int i = 0; i < charsInRecord.Length; i++)
                 {
                     if (activeRecord.children[i] != null)
                     {
@@ -705,9 +708,6 @@ namespace BiblioTrieca
         public void GarbageCollect()
         //Goes through the trie using BFS and cuts pointers to branches whose size is zero
         {
-            char[] charsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
-                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ' '];
-
             System.Collections.Generic.Queue<string> bfsQueue = new Queue<string>();
             bfsQueue.Enqueue("");
 
@@ -734,6 +734,14 @@ namespace BiblioTrieca
             }
         }
 
+        public void SaveToFile(string adress)
+        {
 
+        }
+
+        public void LoadFromFile()
+        {
+
+        }
     }
 }

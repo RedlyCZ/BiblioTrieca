@@ -153,6 +153,23 @@ namespace Tests
                     Console.WriteLine("Test 8 : Failed");
                 }
             }
+
+            //Test 9
+            
+            byte[] bigData = new byte[150];
+            for(int i = 0; i < bigData.Length; i++)
+            {
+                bigData[i] = (byte)i;
+            }
+            try
+            {
+                db.AddElement("velke dato", bigData);
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("Test 9 : Passed");
+            }
+            
         }
 
         static void TrieInRamTests()
