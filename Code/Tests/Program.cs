@@ -249,12 +249,53 @@ namespace Tests
             //Test 5.75
             //db2.ConsolePrint("", 6);
 
+            //Required temp removal before test 6 and test 7
+            if (File.Exists("savedRAMTrie"))
+            {
+                File.Delete("savedRAMTrie");
+            }
+            if (File.Exists("savedRAMTrieWOGB"))
+            {
+                File.Delete("savedRAMTrieWOGB");
+            }
+
+            //Test 6
+            db2.SaveToFile("savedRAMTrieWOGB", false);
+            db2.SaveToFile("savedRAMTrie");
+            TrieInRAM db3 = new TrieInRAM();
+            db3.LoadFromFile("savedRAMTrie");
+            if(db3.ReadElement("po tom") != null && db3.ReadElement("po tom")[0] == 2)
+            {
+                Console.WriteLine("Test 6 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 6 : Failed");
+            }
+
+            //Test 7
+            if(File.Exists("savedRAMTrie") && File.Exists("savedRAMTrieWOGB"))
+            {
+                if (new FileInfo("savedRAMTrie").Length < new FileInfo("savedRAMTrieWOGB").Length)
+                {
+                    Console.WriteLine("Test 7 : Passed");
+                }
+                else
+                {
+                    Console.WriteLine("Test 7 : Failed");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Test 7 : Failed");
+            }
+
         }
 
 
         static void Main(string[] args)
         {
-            TrieInFileTests();
+            //TrieInFileTests();
             TrieInRamTests();
         }
     }

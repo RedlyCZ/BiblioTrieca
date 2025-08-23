@@ -111,7 +111,7 @@ namespace BiblioTrieca
 
         public void AddElement(string key, byte[] data, bool replace = true)
         {
-            if (data.Length <= recordLength - 4 * charsInRecord.Length - 1)
+            if (data == null || data.Length <= recordLength - 4 * charsInRecord.Length - 1)
             //If data fits in the record
             {
                 uint activeRecordIndex = 0;
@@ -154,9 +154,16 @@ namespace BiblioTrieca
                     {
                         //Set the indication byte
                         fileStream.Position = activeRecordIndex * recordLength + 4 * charsInRecord.Length;
-                        writer.Write((byte)1);
-                        //Then write the data in designated record
-                        writer.Write(data);
+                        if(data != null)
+                        {
+                            writer.Write((byte)1);
+                            //Then write the data in designated record
+                            writer.Write(data);
+                        }
+                        else
+                        {
+                            writer.Write((byte)0);
+                        }
                     }
                     else
                     {
@@ -547,7 +554,10 @@ namespace BiblioTrieca
             //Then add the data
             activeRecord.data = data;
             //And set activation
-            activeRecord.active = true;
+            if(data != null)
+            {
+                activeRecord.active = true;
+            }
         }
 
         public Record KeyToRecord(string key)
@@ -570,7 +580,15 @@ namespace BiblioTrieca
 
         public byte[] ReadElement(string key)
         {
-            return KeyToRecord(key).data;
+            Record destination = KeyToRecord(key);
+            if (destination != null)
+            {
+                return KeyToRecord(key).data;
+            }
+            else
+            {
+                return null;
+            }
         }
 
         public void RemoveElement(string key)
@@ -734,14 +752,64 @@ namespace BiblioTrieca
             }
         }
 
-        public void SaveToFile(string adress)
+        public void SaveToFile(string adress, bool garbageCollect = true)
+        //Saves all records to file on this adress, based on protocol for TrieInFile
+        //Creates TrieInFile and using BFS add every element to it
+        //If GB is disabled, adds even empty (non-data) branches to the file
         {
+            if (garbageCollect)
+            {
+                this.GarbageCollect();
+            }
 
+            TrieInFile savedTrie = new TrieInFile(adress);
+
+            System.Collections.Generic.Queue<string> bfsQueue = new Queue<string>();
+            bfsQueue.Enqueue("");
+            while(bfsQueue.Count > 0)
+            {
+                //Add this record to the file
+                string activeKey = bfsQueue.Dequeue();
+                Record activeRecord = KeyToRecord(activeKey);
+                savedTrie.AddElement(activeKey, activeRecord.data);
+
+                //Continue to children
+                for(int i = 0; i < activeRecord.children.Length; i++)
+                {
+                    if(activeRecord.children[i] != null)
+                    {
+                        bfsQueue.Enqueue(activeKey+charsInRecord[i]);
+                    }
+                }
+            }
         }
 
-        public void LoadFromFile()
+        public void LoadFromFile(string adress)
+        //Loads TrieInRAM from its binary (TrieInFile) file
+        //Using BFS goes through all the TrieInFile and adds every record to this TrieInRAM
         {
+            TrieInFile loadedTrie = new TrieInFile(adress);
 
+            System.Collections.Generic.Queue<string> bfsQueue = new Queue<string>();
+            bfsQueue.Enqueue("");
+            while (bfsQueue.Count > 0)
+            {
+                //First load activeRecord to TrieInRAM
+                string activeKey = bfsQueue.Dequeue();
+                byte[] activeData = loadedTrie.ReadElement(activeKey);
+                this.AddElement(activeKey, activeData);
+
+                //Then continue to children
+                int[] metas = loadedTrie.ReadMetadata(activeKey);
+                for(int i = 1; i < metas.Length; i++) //we skip indication byte
+                {
+                    if (metas[i] != 0)
+                    //If child exists
+                    {
+                        bfsQueue.Enqueue(activeKey + charsInRecord[i-1]);
+                    }
+                }
+            }
         }
     }
 }
