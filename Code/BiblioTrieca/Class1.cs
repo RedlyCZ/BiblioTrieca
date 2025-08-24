@@ -8,6 +8,9 @@ namespace BiblioTrieca
         void AddElement(string key, byte[] data, bool replace = true);
         byte[] ReadElement(string key);
         void RemoveElement(string key);
+        void RemoveBranch(string key);
+        uint BranchSize(string key);
+        string[] AutoComplete(string key, int numberOfCompletions);
     }
 
     public class TrieInFile : TrieDatabase
@@ -375,6 +378,12 @@ namespace BiblioTrieca
 
         public string[] AutoComplete(string key, int numberOfCompletions)
         {
+            //If record isnt in trie and so doesnt have any possible completions
+            if(this.ReadMetadata(key) == null)
+            {
+                return null;
+            }
+
             //For autocomplete not to return own value
             if (this.ReadMetadata(key)[0] == 1)
             {
@@ -488,7 +497,7 @@ namespace BiblioTrieca
         }
     }
 
-    public class TrieInRAM
+    public class TrieInRAM : TrieDatabase
     {
         public class Record
         {
@@ -532,7 +541,7 @@ namespace BiblioTrieca
             }
             throw new Exception("invalid character in key");
         }
-        public virtual void AddElement(string key, byte[] data)
+        public virtual void AddElement(string key, byte[] data, bool replace = true)
         {
             Record activeRecord = root;
             //First navigate to the correct record
@@ -551,8 +560,11 @@ namespace BiblioTrieca
                     activeRecord = activeRecord.children[activeChildIndex];
                 }
             }
-            //Then add the data
-            activeRecord.data = data;
+            if (!activeRecord.active || replace)
+            {
+                //Then add the data
+                activeRecord.data = data;
+            }  
             //And set activation
             if(data != null)
             {
@@ -625,11 +637,11 @@ namespace BiblioTrieca
             }
         }
 
-        public int Branchsize(string key)
+        public uint BranchSize(string key)
         //Returns number of active data records in branch defined by root with this key
         {
             Record activeRecord = KeyToRecord(key);
-            int branchSize = 0;
+            uint branchSize = 0;
             System.Collections.Generic.Queue<Record> bfsQueue = new Queue<Record>();
             bfsQueue.Enqueue(activeRecord);
 
@@ -653,6 +665,12 @@ namespace BiblioTrieca
 
         public string[] AutoComplete(string key, int numberOfCompletions)
         {
+            //If record isnt in trie and so doesnt have any possible completions
+            if (KeyToRecord(key) == null)
+            {
+                return null;
+            }
+
             if (KeyToRecord(key).active)
             {
                 numberOfCompletions++; //For it not to count key itself
@@ -737,7 +755,7 @@ namespace BiblioTrieca
                     if(activeRecord.children[i] != null)
                     //Foreach existing child
                     {
-                        if (this.Branchsize(activeKey + charsInRecord[i]) == 0)
+                        if (this.BranchSize(activeKey + charsInRecord[i]) == 0)
                         //If branch defined by this child doesnt have any active records
                         {
                             activeRecord.children[i] = null; //Then delete the pointer and let runtime GC take over
@@ -810,9 +828,40 @@ namespace BiblioTrieca
                 }
             }
         }
+
+        public LinkedListRAMTrie ConvertToLinkedListBased(bool garbageCollect = true)
+        {
+            if (garbageCollect)
+            {
+                this.GarbageCollect();
+            }
+
+            LinkedListRAMTrie returnTrie = new LinkedListRAMTrie();
+
+            System.Collections.Generic.Queue<string> bfsQueue = new Queue<string>();
+            bfsQueue.Enqueue("");
+            while (bfsQueue.Count > 0)
+            {
+                //Add this record to the file
+                string activeKey = bfsQueue.Dequeue();
+                Record activeRecord = KeyToRecord(activeKey);
+                returnTrie.AddElement(activeKey, activeRecord.data);
+
+                //Continue to children
+                for (int i = 0; i < activeRecord.children.Length; i++)
+                {
+                    if (activeRecord.children[i] != null)
+                    {
+                        bfsQueue.Enqueue(activeKey + charsInRecord[i]);
+                    }
+                }
+            }
+
+            return returnTrie;
+        }
     }
 
-    public class LinkedListRAMTrie
+    public class LinkedListRAMTrie : TrieDatabase
     {
         public class Record
         {
@@ -864,7 +913,7 @@ namespace BiblioTrieca
             throw new Exception("invalid character in key");
         }
 
-        public void AddElement(string key, byte[] data)
+        public void AddElement(string key, byte[] data, bool replace = true)
         {
             Record activeRecord = root;
             //First navigate to the correct record
@@ -884,8 +933,11 @@ namespace BiblioTrieca
                     activeRecord = childRecord;
                 }
             }
-            //Then add the data
-            activeRecord.data = data;
+            if (!activeRecord.active || replace)
+            {
+                //Then add the data
+                activeRecord.data = data;
+            }
             //And set activation
             if (data != null)
             {
@@ -899,7 +951,7 @@ namespace BiblioTrieca
             for (int i = 0; i < key.Length; i++)
             {
                 Record activeChild = CharToRecord(key[i], activeRecord);
-                if (activeRecord != null)
+                if (activeChild != null)
                 {
                     activeRecord = activeChild;
                 }
@@ -959,11 +1011,11 @@ namespace BiblioTrieca
             }
         }
 
-        public int Branchsize(string key)
+        public uint BranchSize(string key)
         //Returns number of active data records in branch defined by root with this key
         {
             Record activeRecord = KeyToRecord(key);
-            int branchSize = 0;
+            uint branchSize = 0;
             System.Collections.Generic.Queue<Record> bfsQueue = new Queue<Record>();
             bfsQueue.Enqueue(activeRecord);
 
@@ -987,6 +1039,11 @@ namespace BiblioTrieca
 
         public string[] AutoComplete(string key, int numberOfCompletions)
         {
+            //If record isnt in trie and so doesnt have any possible completions
+            if (this.KeyToRecord(key) == null)
+            {
+                return null;
+            }
             if (KeyToRecord(key).active)
             {
                 numberOfCompletions++; //For it not to count key itself
@@ -1072,7 +1129,7 @@ namespace BiblioTrieca
                     if (activeChild != null)
                     //Foreach existing child
                     {
-                        if (this.Branchsize(activeKey + activeChild.character) == 0)
+                        if (this.BranchSize(activeKey + activeChild.character) == 0)
                         //If branch defined by this child doesnt have any active records
                         {
                             deleteQueue.Enqueue(activeChild); //Add this node for deletion
@@ -1091,12 +1148,15 @@ namespace BiblioTrieca
             }
         }
     
-        public TrieInRAM ConvertToArrayBased()
+        public TrieInRAM ConvertToArrayBased(bool garbageCollect = true)
         //Returns TrieInRAM with the same records as this LinkedListRAMTrie
-        //Does GarbageCollect before, to save space
+        //Does voluntary GarbageCollect before, to save space
         //Goes through every record using BFS and adds each of them to new TrieInRAM
         {
-            this.GarbageCollect();
+            if (garbageCollect)
+            {
+                this.GarbageCollect();
+            }
             TrieInRAM returnTrie = new TrieInRAM();
             
             System.Collections.Generic.Queue<string> bfsQueue = new System.Collections.Generic.Queue<string>();

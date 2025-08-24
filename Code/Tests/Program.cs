@@ -155,7 +155,6 @@ namespace Tests
             }
 
             //Test 9
-            
             byte[] bigData = new byte[150];
             for(int i = 0; i < bigData.Length; i++)
             {
@@ -169,7 +168,16 @@ namespace Tests
             {
                 Console.WriteLine("Test 9 : Passed");
             }
-            
+
+            //Test 10
+            if(db.AutoComplete("nonexistent element", 5) == null)
+            {
+                Console.WriteLine("Test 10 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 10 : Failed");
+            }
         }
 
         static void TrieInRamTests()
@@ -206,8 +214,8 @@ namespace Tests
             db2.AddElement("po tom", [2]);
             db2.AddElement("pote", [3]);
             db2.AddElement("potomek", [4]);
-            int a = db2.Branchsize("pot");
-            if (db2.Branchsize("pot") == 3) 
+            uint a = db2.BranchSize("pot");
+            if (db2.BranchSize("pot") == 3) 
             {
                 Console.WriteLine("Test 3 : Passed");
             }
@@ -290,6 +298,26 @@ namespace Tests
                 Console.WriteLine("Test 7 : Failed");
             }
 
+            //Test 8
+            if (db3.AutoComplete("nonexistent element", 5) == null)
+            {
+                Console.WriteLine("Test 8 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 8 : Failed");
+            }
+
+            //Test 9
+            LinkedListRAMTrie db6 = db2.ConvertToLinkedListBased();
+            if (db6.ReadElement("ahojda")[0] == 55)
+            {
+                Console.WriteLine("Test 9 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 9 : Failed");
+            }
         }
 
         static void LinkedListRAMTrieTests()
@@ -327,8 +355,8 @@ namespace Tests
             db4.AddElement("po tom", [2]);
             db4.AddElement("pote", [3]);
             db4.AddElement("potomek", [4]);
-            int a = db4.Branchsize("pot");
-            if (db4.Branchsize("pot") == 3)
+            uint a = db4.BranchSize("pot");
+            if (db4.BranchSize("pot") == 3)
             {
                 Console.WriteLine("Test 3 : Passed");
             }
@@ -379,6 +407,16 @@ namespace Tests
             else
             {
                 Console.WriteLine("Test 6 : Failed");
+            }
+
+            //Test 8
+            if (db4.AutoComplete("nonexistent element", 5) == null)
+            {
+                Console.WriteLine("Test 7 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 7 : Failed");
             }
 
         }
