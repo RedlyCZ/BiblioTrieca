@@ -511,7 +511,7 @@ namespace BiblioTrieca
 
         Record root = new Record(); //Root of trie, representing ""
         private static int CharToIndex(char c)
-        //Based on char in key return byte offset in record
+        //Based on char in key return index in record
         //Doesnt distinguish between capitalized letters
         {
             if (c > 47 && c < 58)
@@ -532,7 +532,7 @@ namespace BiblioTrieca
             }
             throw new Exception("invalid character in key");
         }
-        public void AddElement(string key, byte[] data)
+        public virtual void AddElement(string key, byte[] data)
         {
             Record activeRecord = root;
             //First navigate to the correct record
@@ -559,8 +559,7 @@ namespace BiblioTrieca
                 activeRecord.active = true;
             }
         }
-
-        public Record KeyToRecord(string key)
+        public virtual Record KeyToRecord(string key)
         {
             Record activeRecord = root;
             for (int i = 0; i < key.Length; i++)
@@ -583,7 +582,7 @@ namespace BiblioTrieca
             Record destination = KeyToRecord(key);
             if (destination != null)
             {
-                return KeyToRecord(key).data;
+                return destination.data;
             }
             else
             {
@@ -810,6 +809,313 @@ namespace BiblioTrieca
                     }
                 }
             }
+        }
+    }
+
+    public class LinkedListRAMTrie
+    {
+        public class Record
+        {
+            public byte[] data;
+            public System.Collections.Generic.LinkedList<Record> children;
+            public bool active;
+            public char character;
+
+            public Record()
+            {
+                this.children = new System.Collections.Generic.LinkedList<Record>();
+                this.active = false;
+            }
+
+            public Record(char c)
+            {
+                this.children = new System.Collections.Generic.LinkedList<Record>();
+                this.active = false;
+                this.character = c;
+            }
+        }
+
+        Record root = new Record(); //Root of trie, representing ""
+
+        private static Record CharToRecord(char c, Record record)
+        //Based on char in key return record in this records linked list
+        //Doesnt distinguish between capitalized letters
+        {
+            if (c > 64 && c < 91)
+            {
+                //If capitalized, decapitalize it
+                int int_c = (int)c;
+                int_c = int_c + 32;
+                c = (char)int_c;
+            }
+            foreach(Record activeRecord in record.children)
+            {
+                if(activeRecord.character == c)
+                {
+                    return activeRecord;
+                }
+            }
+            if((c > 47 && c < 58) || (c > 64 && c < 91) || (c > 96 && c < 123) || c == 32)
+            //If character is in the list of possible characters
+            {
+                return null;
+            }
+            //Maybe to implement return null, if character is valid, but not in the linkedlist
+            throw new Exception("invalid character in key");
+        }
+
+        public void AddElement(string key, byte[] data)
+        {
+            Record activeRecord = root;
+            //First navigate to the correct record
+            for (int i = 0; i < key.Length; i++)
+            {
+                Record childRecord = CharToRecord(key[i], activeRecord);
+                if (childRecord == null)
+                //If there is no child continuing this way, then we have to create our way
+                {
+                    Record newRecord = new Record(key[i]);
+                    activeRecord.children.AddFirst(newRecord);
+                    activeRecord = newRecord;
+                }
+                else
+                //If child already exists, simply continue through it
+                {
+                    activeRecord = childRecord;
+                }
+            }
+            //Then add the data
+            activeRecord.data = data;
+            //And set activation
+            if (data != null)
+            {
+                activeRecord.active = true;
+            }
+        }
+
+        public Record KeyToRecord(string key)
+        {
+            Record activeRecord = root;
+            for (int i = 0; i < key.Length; i++)
+            {
+                Record activeChild = CharToRecord(key[i], activeRecord);
+                if (activeRecord != null)
+                {
+                    activeRecord = activeChild;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            return activeRecord;
+        }
+
+        public byte[] ReadElement(string key)
+        {
+            Record destination = KeyToRecord(key);
+            if (destination != null)
+            {
+                return destination.data;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        public void RemoveElement(string key)
+        {
+            Record destinationRecord = KeyToRecord(key);
+            if (destinationRecord != null)
+            {
+                destinationRecord.data = null;
+                destinationRecord.active = false;
+            }
+        }
+
+        public void RemoveBranch(string key)
+        //Deactivates designated key record and also all records with keys beginning this way (uses DFS)
+        {
+            Record activeRecord = KeyToRecord(key);
+
+            System.Collections.Generic.Queue<Record> bfsQueue = new Queue<Record>();
+            bfsQueue.Enqueue(activeRecord);
+
+            while (bfsQueue.Count > 0)
+            {
+                activeRecord = bfsQueue.Dequeue();
+                //First "remove" this record
+                activeRecord.active = false;
+                activeRecord.data = null;
+                //Then continue to its children
+                foreach(Record activeChild in activeRecord.children)
+                {
+                    if (activeChild != null)
+                    {
+                        bfsQueue.Enqueue(activeChild);
+                    }
+                }
+            }
+        }
+
+        public int Branchsize(string key)
+        //Returns number of active data records in branch defined by root with this key
+        {
+            Record activeRecord = KeyToRecord(key);
+            int branchSize = 0;
+            System.Collections.Generic.Queue<Record> bfsQueue = new Queue<Record>();
+            bfsQueue.Enqueue(activeRecord);
+
+            while (bfsQueue.Count > 0)
+            {
+                activeRecord = bfsQueue.Dequeue();
+                if (activeRecord.active)
+                {
+                    branchSize++;
+                }
+                foreach(Record activeChild in activeRecord.children)
+                {
+                    if (activeRecord != null)
+                    {
+                        bfsQueue.Enqueue(activeChild);
+                    }
+                }
+            }
+            return branchSize;
+        }
+
+        public string[] AutoComplete(string key, int numberOfCompletions)
+        {
+            if (KeyToRecord(key).active)
+            {
+                numberOfCompletions++; //For it not to count key itself
+            }
+
+            int completed = 0;
+            string[] completions = new string[numberOfCompletions];
+
+            string activeKey = key;
+            System.Collections.Generic.Queue<string> bfsQueue = new Queue<string>();
+            bfsQueue.Enqueue(key);
+
+            while (bfsQueue.Count > 0 && completed < numberOfCompletions)
+            {
+                activeKey = bfsQueue.Dequeue();
+                Record activeRecord = KeyToRecord(activeKey);
+                if (activeRecord.active)
+                {
+                    completions[completed] = activeKey;
+                    completed++;
+                }
+                foreach(Record activeChild in activeRecord.children)
+                {
+                    if (activeChild != null)
+                    {
+                        bfsQueue.Enqueue(activeKey + activeChild.character);
+                    }
+                }
+            }
+            if (KeyToRecord(key).active)
+            {
+                return completions[1..];
+            }
+            return completions;
+
+        }
+
+        public void ConsolePrint(string key, int depth, int recursionDepth = 0)
+        //Uses DFS (recursional) to go through subtree and on its way draws the tree
+        //Only shows keys, because showing data was confusing, displays whether record has some data
+        {
+            for (int i = 0; i < recursionDepth; i++)
+            {
+                Console.Write("        |");
+            }
+            Console.Write("> - ");
+            Console.Write(key);
+            Console.Write(" - ");
+            Record activeRecord = KeyToRecord(key);
+            if (activeRecord.active)
+            {
+                Console.Write("HAS DATA\n");
+            }
+            else
+            {
+                Console.Write("NO DATA\n");
+            }
+            if (depth > 0)
+            {
+                foreach(Record activeChild in activeRecord.children)
+                {
+                    if (activeChild != null)
+                    {
+                        this.ConsolePrint(key + activeChild.character, depth - 1, recursionDepth + 1);
+                    }
+                }
+            }
+        }
+
+        public void GarbageCollect()
+        //Goes through the trie using BFS and cuts pointers (and nodes) to branches whose size is zero
+        {
+            System.Collections.Generic.Queue<string> bfsQueue = new Queue<string>();
+            bfsQueue.Enqueue("");
+
+            while (bfsQueue.Count > 0)
+            {
+                string activeKey = bfsQueue.Dequeue();
+                Record activeRecord = KeyToRecord(activeKey);
+                System.Collections.Generic.Queue<Record> deleteQueue = new Queue<Record>();
+                foreach(Record activeChild in activeRecord.children)
+                {
+                    if (activeChild != null)
+                    //Foreach existing child
+                    {
+                        if (this.Branchsize(activeKey + activeChild.character) == 0)
+                        //If branch defined by this child doesnt have any active records
+                        {
+                            deleteQueue.Enqueue(activeChild); //Add this node for deletion
+                        }
+                        else
+                        {
+                            bfsQueue.Enqueue(activeKey + activeChild.character);
+                        }
+                    }
+                }
+                //Now delete the records that were identified
+                while (deleteQueue.Count > 0)
+                {
+                    activeRecord.children.Remove(deleteQueue.Dequeue());
+                }
+            }
+        }
+    
+        public TrieInRAM ConvertToArrayBased()
+        //Returns TrieInRAM with the same records as this LinkedListRAMTrie
+        //Does GarbageCollect before, to save space
+        //Goes through every record using BFS and adds each of them to new TrieInRAM
+        {
+            this.GarbageCollect();
+            TrieInRAM returnTrie = new TrieInRAM();
+            
+            System.Collections.Generic.Queue<string> bfsQueue = new System.Collections.Generic.Queue<string>();
+            bfsQueue.Enqueue("");
+
+            while(bfsQueue.Count > 0)
+            {
+                string activeKey = bfsQueue.Dequeue();
+                Record activeRecord = KeyToRecord(activeKey);
+                returnTrie.AddElement(activeKey, activeRecord.data);
+                foreach (Record activeChild in activeRecord.children)
+                {
+                    if (activeChild != null)
+                    {
+                        bfsQueue.Enqueue(activeKey + activeChild.character);
+                    }
+                }
+            }
+            return returnTrie;
         }
     }
 }

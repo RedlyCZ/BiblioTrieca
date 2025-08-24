@@ -292,11 +292,101 @@ namespace Tests
 
         }
 
+        static void LinkedListRAMTrieTests()
+        {
+            Console.WriteLine("Testing LinkedListRAMTrieTest");
+            
+            LinkedListRAMTrie db4 = new LinkedListRAMTrie();
 
+            //Test 1
+            db4.AddElement("aho j", [14, 15, 19, 45]);
+            byte[] data = db4.ReadElement("aho j");
+            if (data[0] == 14 && data[2] == 19 && data[3] == 45)
+            {
+                Console.WriteLine("Test 1 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 1 : Failed");
+            }
+
+            //Test 2
+            db4.AddElement("ahojda", [55]);
+            db4.RemoveElement("aho j");
+            if (db4.ReadElement("aho j") == null)
+            {
+                Console.WriteLine("Test 2 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 2 : Failed");
+            }
+
+            //Test 3
+            db4.AddElement("pot", [1]);
+            db4.AddElement("po tom", [2]);
+            db4.AddElement("pote", [3]);
+            db4.AddElement("potomek", [4]);
+            int a = db4.Branchsize("pot");
+            if (db4.Branchsize("pot") == 3)
+            {
+                Console.WriteLine("Test 3 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 3 : Failed");
+            }
+
+            //Test 4
+            string[] completed = db4.AutoComplete("poto", 3);
+            if (completed[0] == "potomek" && completed[2] == null)
+            {
+                Console.WriteLine("Test 4 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 4 : Failed");
+            }
+
+            db4.AddElement("polak", []);
+
+            //Test 5
+            db4.RemoveBranch("pot");
+            if (db4.ReadElement("pot") == null && db4.ReadElement("pote") == null && db4.ReadElement("potomek") == null)
+            {
+                Console.WriteLine("Test 5 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 5 : Failed");
+            }
+
+            //Test 5.25
+            //db4.ConsolePrint("", 6);
+
+            //Test 5.5
+            //db4.GarbageCollect();
+
+            //Test 5.75
+            //db4.ConsolePrint("", 6);
+
+            //Test 6
+            TrieInRAM db5 = db4.ConvertToArrayBased();
+            if (db5.ReadElement("po tom")[0] == 2 && db5.ReadElement("ahojda")[0] == 55)
+            {
+                Console.WriteLine("Test 6 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 6 : Failed");
+            }
+
+        }
         static void Main(string[] args)
         {
-            //TrieInFileTests();
+            TrieInFileTests();
             TrieInRamTests();
+            LinkedListRAMTrieTests();
         }
     }
 }
