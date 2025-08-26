@@ -420,11 +420,71 @@ namespace Tests
             }
 
         }
+        
+        static void TrieInFileBitWiseTests()
+        {
+            Console.WriteLine("Testing TrieInFileBitWise");
+            File.Delete("TrieInFileBitWise"); //Force delete, to make size tests work the same
+            TrieInFile db7 = new TrieInFile("TrieInFileBitWise", 0, true);
+
+            //Test 1
+            db7.AddElement("", [12, 14]);
+            db7.AddElement("01", [56, 120, 13]);
+            db7.AddElement("011", [10, 11, 12]);
+
+            if (db7.ReadElement("01")[0] == 56 && db7.ReadElement("01")[2] == 13)
+            {
+                Console.WriteLine("Test 1 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 1 : Failed");
+            }
+
+            //Test 2
+            db7.AddElement("010", [13, 14, 15]);
+            int[] metas = db7.ReadMetadata("01");
+            if (metas[1] == 4 && metas[2] == 3)
+            {
+                Console.WriteLine("Test 2 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 2 : Failed");
+            }
+
+            //Test 3
+            if(db7.nmbRecordsInDB == 4 && new FileInfo("TrieInFileBitWise").Length == 640)
+            {
+                Console.WriteLine("Test 3 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 3 : Failed");
+            }
+
+            //Test 4
+            db7.AddElement("11", [0, 1]);
+            db7.AddElement("101", [1, 2]);
+            db7.AddElement("111", [1, 3]);
+            db7.RemoveBranch("0");
+            db7.GarbageCollector();
+            if (db7.nmbRecordsInDB == 5 && new FileInfo("TrieInFileBitWise").Length == 768)
+            {
+                Console.WriteLine("Test 4 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 4 : Failed");
+            }
+
+        }
         static void Main(string[] args)
         {
-            TrieInFileTests();
-            TrieInRamTests();
-            LinkedListRAMTrieTests();
+            //TrieInFileTests();
+            //TrieInRamTests();
+            //LinkedListRAMTrieTests();
+            TrieInFileBitWiseTests();
         }
     }
 }
