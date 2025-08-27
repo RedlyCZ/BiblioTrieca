@@ -1,4 +1,4 @@
-﻿using BiblioTrieca;
+using BiblioTrieca;
 using System.ComponentModel.Design;
 
 namespace Tests
@@ -70,7 +70,7 @@ namespace Tests
             db.AddElement("ab", []);
 
             //Test 3
-            int[] metas = db.ReadMetadata("A5");
+            uint[] metas = db.ReadMetadata("A5");
             if (metas[0] == 0)
             {
                 PrintTestResult(3, true);
@@ -482,12 +482,173 @@ namespace Tests
             Console.WriteLine("--------------------------------------------------------------");
 
         }
+        
+        static void TrieInFileBitWiseTests()
+        {
+            Console.WriteLine("Testing TrieInFileBitWise");
+            File.Delete("TrieInFileBitWise"); //Force delete, to make size tests work the same
+            TrieInFile db7 = new TrieInFile("TrieInFileBitWise", 0, true);
+
+            //Test 1
+            db7.AddElement("", [12, 14]);
+            db7.AddElement("01", [56, 120, 13]);
+            db7.AddElement("011", [10, 11, 12]);
+
+            if (db7.ReadElement("01")[0] == 56 && db7.ReadElement("01")[2] == 13)
+            {
+                Console.WriteLine("Test 1 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 1 : Failed");
+            }
+
+            //Test 2
+            db7.AddElement("010", [13, 14, 15]);
+            uint[] metas = db7.ReadMetadata("01");
+            if (metas[1] == 4 && metas[2] == 3)
+            {
+                Console.WriteLine("Test 2 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 2 : Failed");
+            }
+
+            //Test 3
+            if(db7.nmbRecordsInDB == 4 && new FileInfo("TrieInFileBitWise").Length == 640)
+            {
+                Console.WriteLine("Test 3 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 3 : Failed");
+            }
+
+            //Test 4
+            db7.AddElement("11", [0, 1]);
+            db7.AddElement("101", [1, 2]);
+            db7.AddElement("111", [1, 3]);
+            db7.RemoveBranch("0");
+            db7.GarbageCollector();
+            if (db7.nmbRecordsInDB == 5 && new FileInfo("TrieInFileBitWise").Length == 768)
+            {
+                Console.WriteLine("Test 4 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 4 : Failed");
+            }
+
+        }
+
+        static void TrieInRAMBitWiseTests()
+        {
+            Console.WriteLine("Testing TrieInRAMBitwise");
+            TrieInRAM db9 = new TrieInRAM(true);
+            //Test 1
+            db9.AddElement("", [12, 14]);
+            db9.AddElement("01", [56, 120, 13]);
+            db9.AddElement("011", [10, 11, 12]);
+
+            if (db9.ReadElement("01")[0] == 56 && db9.ReadElement("01")[2] == 13)
+            {
+                Console.WriteLine("Test 1 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 1 : Failed");
+            }
+
+            //Test 2
+            db9.AddElement("010", [55]);
+            db9.RemoveElement("011");
+            if (db9.ReadElement("011") == null)
+            {
+                Console.WriteLine("Test 2 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 2 : Failed");
+            }
+
+            //Test 3
+            db9.AddElement("111", [1]);
+            db9.AddElement("1110", [2]);
+            db9.AddElement("1111", [3]);
+            db9.AddElement("111010", [4]);
+            uint a = db9.BranchSize("11");
+            if (a == 4)
+            {
+                Console.WriteLine("Test 3 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 3 : Failed");
+            }
+
+            //Test 4
+            string[] completed = db9.AutoComplete("111", 3);
+            if (completed[0] == "1110" && completed[2] == "111010")
+            {
+                Console.WriteLine("Test 4 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 4 : Failed");
+            }
+
+            //Test 5
+            db9.RemoveBranch("1110");
+            if (db9.ReadElement("1110") == null && db9.ReadElement("111010") == null && db9.ReadElement("1111")[0] == 3)
+            {
+                Console.WriteLine("Test 5 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 5 : Failed");
+            }
+
+            //Test 6
+            db9.SaveToFile("savedRAMTrieWOGBBitWise", false);
+            db9.SaveToFile("savedRAMTrieBitWise");
+            TrieInRAM db10 = new TrieInRAM(true);
+            db10.LoadFromFile("savedRAMTrieBitWise");
+            if (db10.ReadElement("01") != null && db10.ReadElement("1111")[0] == 3)
+            {
+                Console.WriteLine("Test 6 : Passed");
+            }
+            else
+            {
+                Console.WriteLine("Test 6 : Failed");
+            }
+
+            //Test 7
+            if (File.Exists("savedRAMTrie") && File.Exists("savedRAMTrieWOGB"))
+            {
+                if (new FileInfo("savedRAMTrie").Length < new FileInfo("savedRAMTrieWOGB").Length)
+                {
+                    Console.WriteLine("Test 7 : Passed");
+                }
+                else
+                {
+                    Console.WriteLine("Test 7 : Failed");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Test 7 : Failed");
+            }
+
+        }
         static void Main(string[] args)
         {
             Console.ForegroundColor = ConsoleColor.White;
             TrieInFileTests();
             TrieInRamTests();
             LinkedListRAMTrieTests();
+            TrieInFileBitWiseTests();
+            TrieInRAMBitWiseTests();
             DeleteTestTemps();
         }
     }
