@@ -307,7 +307,7 @@ namespace BiblioTrieca
             }
         }
 
-        public int[] ReadMetadata(string key)
+        public uint[] ReadMetadata(string key)
         //Returns record indexes of children and indication byte (all as integers)
         {
             uint activeRecordIndex = 0;
@@ -319,7 +319,7 @@ namespace BiblioTrieca
             {
                 BinaryReader reader = new BinaryReader(fileStream);
 
-                int[] metas = new int[1+charsInRecord.Length];
+                uint[] metas = new uint[1+charsInRecord.Length];
 
                 if (activeRecordIndex == 0 && key != "")
                 //If record doesnt exist
@@ -331,12 +331,12 @@ namespace BiblioTrieca
                 {
                     //Jump to the indication byte section of the record
                     fileStream.Position = activeRecordIndex * recordLength + byteSizeForChar *charsInRecord.Length;
-                    metas[0] = Convert.ToInt32(reader.ReadByte());
+                    metas[0] = Convert.ToUInt32(reader.ReadByte());
                     //Jump to the metadata section of the record
                     fileStream.Position = activeRecordIndex * recordLength;
                     for (int i = 0; i < charsInRecord.Length; i++)
                     {
-                        metas[i + 1] = reader.ReadInt32();
+                        metas[i + 1] = reader.ReadUInt32();
                     }
                     reader.Close();
                     return metas;
@@ -437,7 +437,7 @@ namespace BiblioTrieca
             while (bfsQueue.Count > 0 && completed < numberOfCompletions)
             {
                 string activeKey = bfsQueue.Dequeue();
-                int[] activeMetas = this.ReadMetadata(activeKey);
+                uint[] activeMetas = this.ReadMetadata(activeKey);
 
                 //Check if record is active (indication byte set)
                 if (activeMetas[0] == 1)
@@ -484,7 +484,7 @@ namespace BiblioTrieca
             }
             if (depth > 0)
             {
-                int[] metas = this.ReadMetadata(key);
+                uint[] metas = this.ReadMetadata(key);
                 for (int i = 1; i < metas.Length; i++)
                 {
                     if (metas[i] != 0) //If child exists
@@ -508,7 +508,7 @@ namespace BiblioTrieca
             while (bfsQueue.Count > 0)
             {
                 string activeKey = bfsQueue.Dequeue();
-                int[] activeMetas = this.ReadMetadata(activeKey);
+                uint[] activeMetas = this.ReadMetadata(activeKey);
                 byte[] activeData = this.ReadElement(activeKey);
 
                 //Check if record is active (indication byte set)
@@ -537,26 +537,53 @@ namespace BiblioTrieca
 
     public class TrieInRAM : TrieDatabase
     {
+        bool bitWise;
+        char[] charsInRecord;
+
+        Record root; //Root of trie, representing ""
+
+        public TrieInRAM(bool bitWise = false)
+        {
+            this.bitWise = bitWise;
+            if (bitWise)
+            {
+                this.charsInRecord = ['0', '1'];
+            }
+            else
+            {
+                this.charsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
+                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ' '];
+                
+            }
+            this.root = new Record(bitWise);
+        }
+
         public class Record
         {
             public byte[] data;
             public Record[] children;
             public bool active;
 
-            char[] charsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
-                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ' '];
+            char[] charsInRecord;
 
-            public Record()
+            public Record(bool bitWise)
             {
-                this.children = new Record[charsInRecord.Length];
                 this.active = false;
+                if (bitWise)
+                {
+                    charsInRecord = ['0', '1'];
+                }
+                else
+                {
+                    charsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
+                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ' '];
+                }
+                this.children = new Record[charsInRecord.Length];
             }
         }
 
-        char[] charsInRecord = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
-                'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ' '];
+        
 
-        Record root = new Record(); //Root of trie, representing ""
         private static int CharToIndex(char c)
         //Based on char in key return index in record
         //Doesnt distinguish between capitalized letters
@@ -589,7 +616,7 @@ namespace BiblioTrieca
                 if (activeRecord.children[activeChildIndex] == null)
                 //If there is no child continuing this way, then we have to create our way
                 {
-                    activeRecord.children[activeChildIndex] = new Record();
+                    activeRecord.children[activeChildIndex] = new Record(this.bitWise);
                     activeRecord = activeRecord.children[activeChildIndex];
                 }
                 else
@@ -855,7 +882,7 @@ namespace BiblioTrieca
                 this.AddElement(activeKey, activeData);
 
                 //Then continue to children
-                int[] metas = loadedTrie.ReadMetadata(activeKey);
+                uint[] metas = loadedTrie.ReadMetadata(activeKey);
                 for(int i = 1; i < metas.Length; i++) //we skip indication byte
                 {
                     if (metas[i] != 0)
