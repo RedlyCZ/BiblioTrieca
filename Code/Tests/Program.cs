@@ -27,6 +27,8 @@ namespace Tests
             File.Delete("savedRAMTrieWOGB");
             File.Delete("TrieInFileFile");
             File.Delete("TrieInFileBitWise");
+            File.Delete("savedRAMTrieBitWise");
+            File.Delete("savedRAMTrieWOGBBitWise");
         }
 
         static void TrieInFileTests()
@@ -485,7 +487,9 @@ namespace Tests
         
         static void TrieInFileBitWiseTests()
         {
+            int nmbPass = 0;
             Console.WriteLine("Testing TrieInFileBitWise");
+
             File.Delete("TrieInFileBitWise"); //Force delete, to make size tests work the same
             TrieInFile db7 = new TrieInFile("TrieInFileBitWise", 0, true);
 
@@ -496,11 +500,12 @@ namespace Tests
 
             if (db7.ReadElement("01")[0] == 56 && db7.ReadElement("01")[2] == 13)
             {
-                Console.WriteLine("Test 1 : Passed");
+                PrintTestResult(1, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 1 : Failed");
+                PrintTestResult(1, false);
             }
 
             //Test 2
@@ -508,21 +513,23 @@ namespace Tests
             uint[] metas = db7.ReadMetadata("01");
             if (metas[1] == 4 && metas[2] == 3)
             {
-                Console.WriteLine("Test 2 : Passed");
+                PrintTestResult(2, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 2 : Failed");
+                PrintTestResult(2, false);
             }
 
             //Test 3
             if(db7.nmbRecordsInDB == 4 && new FileInfo("TrieInFileBitWise").Length == 640)
             {
-                Console.WriteLine("Test 3 : Passed");
+                PrintTestResult(3, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 3 : Failed");
+                PrintTestResult(3, false);
             }
 
             //Test 4
@@ -533,18 +540,23 @@ namespace Tests
             db7.GarbageCollector();
             if (db7.nmbRecordsInDB == 5 && new FileInfo("TrieInFileBitWise").Length == 768)
             {
-                Console.WriteLine("Test 4 : Passed");
+                PrintTestResult(4, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 4 : Failed");
+                PrintTestResult(4, false);
             }
 
+            Console.WriteLine($"All tests in this branch completed, {(nmbPass * 100) / 4} % of tests passed");
+            Console.WriteLine("--------------------------------------------------------------");
         }
 
         static void TrieInRAMBitWiseTests()
         {
-            Console.WriteLine("Testing TrieInRAMBitwise");
+            int nmbPass = 0;
+            Console.WriteLine("Testing TrieInRAMBitWise");
+
             TrieInRAM db9 = new TrieInRAM(true);
             //Test 1
             db9.AddElement("", [12, 14]);
@@ -553,11 +565,12 @@ namespace Tests
 
             if (db9.ReadElement("01")[0] == 56 && db9.ReadElement("01")[2] == 13)
             {
-                Console.WriteLine("Test 1 : Passed");
+                PrintTestResult(1, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 1 : Failed");
+                PrintTestResult(1, false);
             }
 
             //Test 2
@@ -565,11 +578,12 @@ namespace Tests
             db9.RemoveElement("011");
             if (db9.ReadElement("011") == null)
             {
-                Console.WriteLine("Test 2 : Passed");
+                PrintTestResult(2, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 2 : Failed");
+                PrintTestResult(2, false);
             }
 
             //Test 3
@@ -580,33 +594,36 @@ namespace Tests
             uint a = db9.BranchSize("11");
             if (a == 4)
             {
-                Console.WriteLine("Test 3 : Passed");
+                PrintTestResult(3, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 3 : Failed");
+                PrintTestResult(3, false);
             }
 
             //Test 4
             string[] completed = db9.AutoComplete("111", 3);
             if (completed[0] == "1110" && completed[2] == "111010")
             {
-                Console.WriteLine("Test 4 : Passed");
+                PrintTestResult(4, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 4 : Failed");
+                PrintTestResult(4, false);
             }
 
             //Test 5
             db9.RemoveBranch("1110");
             if (db9.ReadElement("1110") == null && db9.ReadElement("111010") == null && db9.ReadElement("1111")[0] == 3)
             {
-                Console.WriteLine("Test 5 : Passed");
+                PrintTestResult(5, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 5 : Failed");
+                PrintTestResult(5, false);
             }
 
             //Test 6
@@ -616,29 +633,34 @@ namespace Tests
             db10.LoadFromFile("savedRAMTrieBitWise");
             if (db10.ReadElement("01") != null && db10.ReadElement("1111")[0] == 3)
             {
-                Console.WriteLine("Test 6 : Passed");
+                PrintTestResult(6, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 6 : Failed");
+                PrintTestResult(6, false);
             }
 
             //Test 7
-            if (File.Exists("savedRAMTrie") && File.Exists("savedRAMTrieWOGB"))
+            if (File.Exists("savedRAMTrieBitWise") && File.Exists("savedRAMTrieWOGBBitWise"))
             {
-                if (new FileInfo("savedRAMTrie").Length < new FileInfo("savedRAMTrieWOGB").Length)
+                if (new FileInfo("savedRAMTrieBitWise").Length < new FileInfo("savedRAMTrieWOGBBitWise").Length)
                 {
-                    Console.WriteLine("Test 7 : Passed");
+                    PrintTestResult(7, true);
+                    nmbPass++;
                 }
                 else
                 {
-                    Console.WriteLine("Test 7 : Failed");
+                    PrintTestResult(7, false);
                 }
             }
             else
             {
-                Console.WriteLine("Test 7 : Failed");
+                PrintTestResult(7, false);
             }
+
+            Console.WriteLine($"All tests in this branch completed, {(nmbPass * 100) / 7} % of tests passed");
+            Console.WriteLine("--------------------------------------------------------------");
 
         }
         static void Main(string[] args)
