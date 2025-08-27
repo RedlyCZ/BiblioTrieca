@@ -1,13 +1,39 @@
 ﻿using BiblioTrieca;
+using System.ComponentModel.Design;
 
 namespace Tests
 {
     internal class Program
     {
+        static void PrintTestResult(int testNumber, bool passed)
+        {
+            Console.Write($"Test {testNumber} : ");
+            if (passed)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.Write("Passed\n");
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.Write("Failed\n");
+            }
+            Console.ForegroundColor = ConsoleColor.White;
+        }
+
+        static void DeleteTestTemps()
+        {
+            File.Delete("savedRAMTrie");
+            File.Delete("savedRAMTrieWOGB");
+            File.Delete("TrieInFileFile");
+            File.Delete("TrieInFileBitWise");
+        }
+
         static void TrieInFileTests()
         //Tests various methods of TrieInFile from BiblioTrieca
         //Two test are disabled, because they are not easily evaluated
         {
+            int nmbPass = 0;
             Console.WriteLine("Testing TrieInFile");
             TrieInFile db = new TrieInFile("TrieInFileFile", 1);
 
@@ -19,11 +45,12 @@ namespace Tests
             byte[] data = db.ReadElement("a5");
             if (data[0] == 100 && data[1] == 15 && data[2] == 4 && data[3] == 0 && data[65] == 0)
             {
-                Console.WriteLine("Test 1 : Passed");
+                PrintTestResult(1, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 1 : Failed");
+                PrintTestResult(1, false);
             }
 
             //Test 2
@@ -31,11 +58,12 @@ namespace Tests
             data = db.ReadElement("a5");
             if (data == null)
             {
-                Console.WriteLine("Test 2 : Passed");
+                PrintTestResult(2, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 2 : Failed");
+                PrintTestResult(2, false);
             }
 
             db.AddElement("a52", []);
@@ -45,11 +73,12 @@ namespace Tests
             int[] metas = db.ReadMetadata("A5");
             if (metas[0] == 0)
             {
-                Console.WriteLine("Test 3 : Passed");
+                PrintTestResult(3, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 3 : Failed");
+                PrintTestResult(3, false);
             }
 
             //Test 4
@@ -59,16 +88,17 @@ namespace Tests
                 db.AddElement("", [0xAC, 0xDC], false);
                 if (db.ReadElement("")[1] == 12)
                 {
-                    Console.WriteLine("Test 4 : Passed");
+                    PrintTestResult(4, true);
+                    nmbPass++;
                 }
                 else
                 {
-                    Console.WriteLine("Test 4 : Failed");
+                    PrintTestResult(4, false);
                 }
             }
             else
             {
-                Console.WriteLine("Test 4 : Failed");
+                PrintTestResult(4, false);
             }
 
             //Test 5
@@ -79,22 +109,24 @@ namespace Tests
             db.AddElement("automat", [5]);
             if (db.BranchSize("aut") == 5)
             {
-                Console.WriteLine("Test 5 : Passed");
+                PrintTestResult(5, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 5 : Failed");
+                PrintTestResult(5, false);
             }
 
             //Test 6
             string[] autocompletions = db.AutoComplete("a", 4);
             if (autocompletions[0] == "ab" && autocompletions[1] == "a52" && autocompletions[2] == "aut" && autocompletions[3] == "auto")
             {
-                Console.WriteLine("Test 6 : Passed");
+                PrintTestResult(6, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 6 : Failed");
+                PrintTestResult(6, false);
             }
 
 
@@ -103,11 +135,12 @@ namespace Tests
             if (db.ReadElement("aut") == null && db.ReadElement("autarkie") == null && db.ReadElement("auto") == null
                 && db.ReadElement("automat") == null && db.ReadElement("autodrom") == null)
             {
-                Console.WriteLine("Test 7 : Passed");
+                PrintTestResult(7, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 7 : Failed");
+                PrintTestResult(7, false);
             }
 
             //Test 7.5 - graphical
@@ -146,11 +179,12 @@ namespace Tests
                 db.GarbageCollector();
                 if (db.nmbRecordsInDB == 4)
                 {
-                    Console.WriteLine("Test 8 : Passed");
+                    PrintTestResult(8, true);
+                    nmbPass++;
                 }
                 else
                 {
-                    Console.WriteLine("Test 8 : Failed");
+                    PrintTestResult(8, false);
                 }
             }
 
@@ -166,22 +200,27 @@ namespace Tests
             }
             catch (Exception)
             {
-                Console.WriteLine("Test 9 : Passed");
+                PrintTestResult(9, true);
+                nmbPass++;
             }
 
             //Test 10
-            if(db.AutoComplete("nonexistent element", 5) == null)
+            if (db.AutoComplete("nonexistent element", 5) == null)
             {
-                Console.WriteLine("Test 10 : Passed");
+                PrintTestResult(10, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 10 : Failed");
+                PrintTestResult(10, false);
             }
+            Console.WriteLine($"All tests in this branch completed, {(nmbPass*100)/10} % of tests passed");
+            Console.WriteLine("--------------------------------------------------------------");
         }
 
         static void TrieInRamTests()
         {
+            int nmbPass = 0;
             Console.WriteLine("Testing TrieInRAM");
             TrieInRAM db2 = new TrieInRAM();
 
@@ -190,11 +229,12 @@ namespace Tests
             byte[] data = db2.ReadElement("aho j");
             if (data[0] == 14 && data[2] == 19 && data[3] == 45)
             {
-                Console.WriteLine("Test 1 : Passed");
+                PrintTestResult(1, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 1 : Failed");
+                PrintTestResult(1, false);
             }
 
             //Test 2
@@ -202,11 +242,12 @@ namespace Tests
             db2.RemoveElement("aho j");
             if(db2.ReadElement("aho j") == null)
             {
-                Console.WriteLine("Test 2 : Passed");
+                PrintTestResult(2, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 2 : Failed");
+                PrintTestResult(2, false);
             }
 
             //Test 3
@@ -217,22 +258,24 @@ namespace Tests
             uint a = db2.BranchSize("pot");
             if (db2.BranchSize("pot") == 3) 
             {
-                Console.WriteLine("Test 3 : Passed");
+                PrintTestResult(3, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 3 : Failed");
+                PrintTestResult(3, false);
             }
 
             //Test 4
             string[] completed = db2.AutoComplete("poto", 3);
             if (completed[0] == "potomek" && completed[2] == null)
             {
-                Console.WriteLine("Test 4 : Passed");
+                PrintTestResult(4, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 4 : Failed");
+                PrintTestResult(4, false);
             }
 
             db2.AddElement("polak", []);
@@ -241,11 +284,12 @@ namespace Tests
             db2.RemoveBranch("pot");
             if (db2.ReadElement("pot") == null && db2.ReadElement("pote") == null && db2.ReadElement("potomek") == null)
             {
-                Console.WriteLine("Test 5 : Passed");
+                PrintTestResult(5, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 5 : Failed");
+                PrintTestResult(5, false);
             }
 
             //Test 5.25
@@ -274,11 +318,12 @@ namespace Tests
             db3.LoadFromFile("savedRAMTrie");
             if(db3.ReadElement("po tom") != null && db3.ReadElement("po tom")[0] == 2)
             {
-                Console.WriteLine("Test 6 : Passed");
+                PrintTestResult(6, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 6 : Failed");
+                PrintTestResult(6, false);
             }
 
             //Test 7
@@ -286,42 +331,49 @@ namespace Tests
             {
                 if (new FileInfo("savedRAMTrie").Length < new FileInfo("savedRAMTrieWOGB").Length)
                 {
-                    Console.WriteLine("Test 7 : Passed");
+                    PrintTestResult(7, true);
+                    nmbPass++;
                 }
                 else
                 {
-                    Console.WriteLine("Test 7 : Failed");
+                    PrintTestResult(7, false);
                 }
             }
             else
             {
-                Console.WriteLine("Test 7 : Failed");
+                PrintTestResult(7, false);
             }
 
             //Test 8
             if (db3.AutoComplete("nonexistent element", 5) == null)
             {
-                Console.WriteLine("Test 8 : Passed");
+                PrintTestResult(8, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 8 : Failed");
+                PrintTestResult(8, false);
             }
 
             //Test 9
             LinkedListRAMTrie db6 = db2.ConvertToLinkedListBased();
             if (db6.ReadElement("ahojda")[0] == 55)
             {
-                Console.WriteLine("Test 9 : Passed");
+                PrintTestResult(9, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 9 : Failed");
+                PrintTestResult(9, false);
             }
+
+            Console.WriteLine($"All tests in this branch completed, {(nmbPass * 100) / 9} % of tests passed");
+            Console.WriteLine("--------------------------------------------------------------");
         }
 
         static void LinkedListRAMTrieTests()
         {
+            int nmbPass = 0;
             Console.WriteLine("Testing LinkedListRAMTrieTest");
             
             LinkedListRAMTrie db4 = new LinkedListRAMTrie();
@@ -331,11 +383,12 @@ namespace Tests
             byte[] data = db4.ReadElement("aho j");
             if (data[0] == 14 && data[2] == 19 && data[3] == 45)
             {
-                Console.WriteLine("Test 1 : Passed");
+                PrintTestResult(1, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 1 : Failed");
+                PrintTestResult(1, false);
             }
 
             //Test 2
@@ -343,11 +396,12 @@ namespace Tests
             db4.RemoveElement("aho j");
             if (db4.ReadElement("aho j") == null)
             {
-                Console.WriteLine("Test 2 : Passed");
+                PrintTestResult(2, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 2 : Failed");
+                PrintTestResult(2, false);
             }
 
             //Test 3
@@ -358,22 +412,24 @@ namespace Tests
             uint a = db4.BranchSize("pot");
             if (db4.BranchSize("pot") == 3)
             {
-                Console.WriteLine("Test 3 : Passed");
+                PrintTestResult(3, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 3 : Failed");
+                PrintTestResult(3, false);
             }
 
             //Test 4
             string[] completed = db4.AutoComplete("poto", 3);
             if (completed[0] == "potomek" && completed[2] == null)
             {
-                Console.WriteLine("Test 4 : Passed");
+                PrintTestResult(4, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 4 : Failed");
+                PrintTestResult(4, false);
             }
 
             db4.AddElement("polak", []);
@@ -382,11 +438,12 @@ namespace Tests
             db4.RemoveBranch("pot");
             if (db4.ReadElement("pot") == null && db4.ReadElement("pote") == null && db4.ReadElement("potomek") == null)
             {
-                Console.WriteLine("Test 5 : Passed");
+                PrintTestResult(5, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 5 : Failed");
+                PrintTestResult(5, false);
             }
 
             //Test 5.25
@@ -402,29 +459,36 @@ namespace Tests
             TrieInRAM db5 = db4.ConvertToArrayBased();
             if (db5.ReadElement("po tom")[0] == 2 && db5.ReadElement("ahojda")[0] == 55)
             {
-                Console.WriteLine("Test 6 : Passed");
+                PrintTestResult(6, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 6 : Failed");
+                PrintTestResult(6, false);
             }
 
             //Test 8
             if (db4.AutoComplete("nonexistent element", 5) == null)
             {
-                Console.WriteLine("Test 7 : Passed");
+                PrintTestResult(7, true);
+                nmbPass++;
             }
             else
             {
-                Console.WriteLine("Test 7 : Failed");
+                PrintTestResult(7, false);
             }
+
+            Console.WriteLine($"All tests in this branch completed, {(nmbPass * 100) / 7} % of tests passed");
+            Console.WriteLine("--------------------------------------------------------------");
 
         }
         static void Main(string[] args)
         {
+            Console.ForegroundColor = ConsoleColor.White;
             TrieInFileTests();
             TrieInRamTests();
             LinkedListRAMTrieTests();
+            DeleteTestTemps();
         }
     }
 }
