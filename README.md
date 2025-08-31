@@ -2,7 +2,7 @@
 
 ## Specifikace
 
-Databázová knihovna obsluhující prefixové stromy (trie) a poskytující vývojářům solidní základ pro jejich další využití. Umožní jejich tvorbu, čtení i modifikaci, přičemž bude tyto úkony provádět efektivně.
+Databázová knihovna obsluhující prefixové stromy (trie) a poskytující vývojářům solidní základ pro jejich další využití. Umožní jejich tvorbu, čtení i modifikaci, přičemž tyto úkony provádí efektivně.
 
 Obsahuje tři hlavní druhy prefixových stromů: prefixový strom ukládaný v souboru - TrieInFile, prefixový strom ukládaný v paměti - TrieInRAM a prefixový strom, vhodnější pro řidčí data založený na spojových seznamech LinkedListRAMTrie.
 Každá z těchto tříd pak obsahuje všechny podstatné metody pro jejich využití, jakož i pro převod mezi sebou.
@@ -18,6 +18,5 @@ Pro spuštění přejděte do složky `Tests` a spusťte příkaz `dotnet run`. 
 
 Ačkoliv komentáře přímo v kódu jsou psané v anglickém jazyce, tak níže přiložená dokumentace je, pro jednoduchost na obou stranách, v češtině.
 
-* [Uživatelská dokumentace](docs/user.md)
-* [Ukázky použití](docs/examples.md)
 * [Programátorská dokumentace](docs/programmer.md)
+* [Projektová dokumentace](docs/project.md)
