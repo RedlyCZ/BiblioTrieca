@@ -18,5 +18,6 @@ Pro spuštění přejděte do složky `Tests` a spusťte příkaz `dotnet run`. 
 
 Ačkoliv komentáře přímo v kódu jsou psané v anglickém jazyce, tak níže přiložená dokumentace je, pro jednoduchost na obou stranách, v češtině.
 
-* [Programátorská dokumentace](docs/programmer.md)
-* [Projektová dokumentace](docs/project.md)
+* [Uživatelská dokumentace](docs/user.md) - pro užití knihovny
+* [Programátorská dokumentace](docs/programmer.md) - pro další vývoj knihovny
+* [Projektová dokumentace](docs/project.md) - pro informace o vývoji

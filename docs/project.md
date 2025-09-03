@@ -12,23 +12,30 @@ Tato část dokumentace popisuje významné body vývoje projektu, komentář au
 ## Volba algoritmů
 Vzhledem k vytyčenému zadání úloha *nevyžadovala* zásadní dilemata při volbě algoritmů. 
 
-V programu se na mnoha místech vyskytují průchody stromem DFS i BFS, které mají své specifické vlastnosti a tudíž si většinou nelze přímo vybírat. Krom nejnutnějších případů (metody ConsolePrint) jsem se snažil vyhnout rekurzivní variantě DFS a nahrazoval ji formou s knihovním zásobníkem.
+Základní algoritmy vychází přímo z definice trie.
 
-U odstranění prvků z databáze jsem se pak nakonec ve všech případech uchýlil ke kaňkování s vlastním Garbage Collectorem.
+V programu se na mnoha místech vyskytují průchody stromem DFS i BFS, které mají své specifické vlastnosti a tudíž si většinou nelze přímo vybírat. Pokud bylo možné využít obě varianty, bylo zvoleno BFS.
+
+U odstranění prvků z databáze jsem se pak nakonec ve všech případech uchýlil k pouhé deaktivaci prvků s vlastním Garbage Collectorem.
+
+### Algoritmy jednotlivých metod
+* *Základní algoritmus prefixových stromů* - `AddElement, ReadElement, RemoveElement`
+* *BFS* - `RemoveBranch, BranchSize, AutoComplete, GarbageCollector, SaveToFile, LoadFromFile, ConvertToLinkedListBased, ConvertToArrayBased`
+* *DFS* - `ConsolePrint`
 
 ## Komentář k průběhu vývoje
 Vývoj je zaznamenán v Git. 
 
-Probíhal víceméně bezproblémově, ačkoliv jsem se několikrát musel vracet k fundamentům fungování, jako například k zahrnutí mezery do možných znaků a tak i změně struktury záznamu.
+Probíhal víceméně bezproblémově, ačkoliv bylo potřeba se několikrát vracet k fundamentům fungování, jako například k zahrnutí mezery do možných znaků a tak i změně struktury záznamu.
 
 Struktura a dekompozice byla od počátku dobře rozvrhnuta a nedocházelo tak k zásadnímu předělání.
 
 ## Zavrhnuté nápady ze zadání
-Valná většina funkcí z původního nástinu zadání byla programu implementována, přičemž byla doplněna ještě o mnohé další. Přesto však zůstávají některé náměty neimplementované. Toto jsou ony, doplněny zdůvodněním.
+Valná většina funkcí z původního nástinu zadání byla programu implementována, přičemž byla doplněna ještě o mnohé další. Přesto však zůstávají některé náměty neimplementované.
 
 * **Dekompozice velkých podstromů do vlastních souborů** - Tento nápad se ukázal konfliktní s potenciálními implementacemi Garbage Collectoru. Jeho reálný význam je pak pochybný a byl tak z projektu zcela vypuštěn.
-* **Volba obecné abecedy** - Nakonec nebyl implementován, protože by přenášel přílišnou část zodpovědnosti na uživatele. Ten by totiž nejen volil abecedu, ale ještě by musel vhodným způsobem volit rozsah dat a stanovit tak velikost záznamů. Díky využití implicitních hodnot téměř u všech výpočtů je ale případná úprava poměrně jednoduchá.
-* **Přehešování klíčů pro rovnoměrnější rozložení** - Zavrhnut víceméně pro nesmyslnost. Do programu by zbytečně vnášel značnou komplikovanost a využití by bylo velmi pochybné. Navíc do určité míry je účel nahrazen pomocí BitWise trie, do kterého lze všechny data převést a má tentenci být hustčí.
+* **Volba obecné abecedy** - Nakonec nebyla implementován, protože by přenášela přílišnou část zodpovědnosti na uživatele. Ten by totiž nejen volil abecedu, ale ještě by musel vhodným způsobem volit rozsah dat a stanovit tak velikost záznamů. Díky využití implicitních hodnot téměř u všech výpočtů je ale případná úprava poměrně jednoduchá.
+* **Přehešování klíčů pro rovnoměrnější rozložení** - Zavrhnuto víceméně pro nesmyslnost. Do programu by zbytečně vnášelo značnou komplikovanost a využití by bylo velmi pochybné. Navíc do určité míry je účel nahrazen pomocí BitWise trie, do kterého lze všechny data převést a má tentenci být hustší.
 
 ## Náměty k rozšíření
 

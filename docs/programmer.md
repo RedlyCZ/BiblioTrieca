@@ -15,19 +15,10 @@ Jednotlivé implementace jsou kompatibilní na úrovni základních charakterist
 
 TrieInFile a TrieInRAM pak lze také využít v režimu **BitWise**, který jako přípustné znaky klíče bere pouze {0, 1}. Díky tomu dokážeme se stejnými 107 byty pro data snížit délku záznamu na *128 bytů*. Pro LinkedListRAMTrie nedává BitWise přepínač konceptuálně smysl.
 
-## TrieDatabase - Co očekávat od metod?
-
-* *AddElement(key, data, replace)* - Přidá prvek s daným klíčem a daty do trie, pokud je třeba, tak si vytvoří strukturální prvky které na něj vedou. Spínač replace, implicitně nastaven na true, rozhoduje, zda pokud již prvek v databázi je, bude přepsán.
-* *ReadElement(key)* - Vrátí data daného prvku, pokud je v databázi a null jinak.
-* *RemoveElement(key)* - Vymaže daný prvek z databáze. (podrobnosti v konkrétních implementacích)
-* *RemoveBranch(key)* - Vymaže daný prvek a všechny jeho syny z databáze. (tudíž prvky jejichž klíč začíná znaky tohoto klíče)
-* *BranchSize(key)* - Vrátí počet aktivních (data majících) prvků v podstromě definovaném daným klíčem.
-* *AutoComplete(key, numberOfCompletions)* - Vrátí pole dané velikosti klíčů, které jsou nejbližšími možnými doplněními daného klíče.
-
 ## TrieInFile
 Třída obsluhující prefixový strom budovaný přímo **v souboru**.
 
-Každý záznam (reprezentující prvních x znaků klíče), má fixní délku. V prvních několika bytech obsahuje na předem známých pozicích označujících následující znak *čtyřbytové číslo*, které určuje, kde hledat záznam, jehož klíč právě tímto znakem pokračuje.
+Každý záznam (reprezentující prvních x znaků klíče) má fixní délku. V prvních několika bytech obsahuje na předem známých pozicích označujících následující znak *čtyřbytové číslo*, které určuje, kde hledat záznam, jehož klíč právě tímto znakem pokračuje.
 
 *Maximální velikost* TrieInFile tedy (díky velikosti odkazů na syny) může být **4 294 967 296 záznamů** neboli celkem **1 TiB** velikost souboru.
 
@@ -47,7 +38,7 @@ Nakonec obsahuje i velmi primitivní *cache*, která obsahuje poslední dotazova
 ## TrieInRAM
 Třída obsluhující prefixový strom budovaný skrze **pole pointerů** na další záznamy.
 
-Obsahuje *podtřídu záznam*. Její instance obsahují pole odkazů na prvky následující danými znaky a případně data (+ boolovskou proměnnou activated).
+Obsahuje *podtřídu záznam*. Její instance obsahují pole odkazů na prvky, jejichž klíče následující danými znaky a případně data (+ boolovskou proměnnou *activated*).
 
 TrieInRAM obsahuje odkaz na kořen tohoto stromu (na záznam s klíčem "") a pak metody, kterými obsluhuje operace nad ním.
 
@@ -62,11 +53,11 @@ Těmito metodami jsou jmenovitě: *SaveToFile, LoadFromFile, ConvertToLinkedList
 ## LinkedListRAMTrie
 Třída obsluhující prefixový strom budovaný skrze **spojový seznam pointerů** na další záznamy.
 
-Obsahuje *podtřídu záznam*. Její instance obsahují spojový seznam odkazů na prvky následující danými znaky a případně data (+ booleovskou proměnnou activated).
+Obsahuje *podtřídu záznam*. Její instance obsahují spojový seznam odkazů na prvky následující danými znaky a případně data (+ booleovskou proměnnou *activated*).
 
 Z vlastností trie založených na spojových seznamech **je obecně pomalejší než TrieInRAM**, ale zato, zejména *u řídkých stromů*, **významně spoří paměťový prostor**.
 
-*Kvůli časové složitosti* metody RemoveElement zde dochází pouze ke **kaňkování "smazaných" prvků**. Vlastní *skutečné smazání* umožňuje až metoda *GarbageCollect*.
+*Kvůli časové složitosti* metody RemoveElement zde dochází pouze k **deaktivaci "smazaných" prvků**. Vlastní *skutečné smazání* umožňuje až metoda *GarbageCollect*.
 
 Krom standartních metod obsahuje navíc metodu *ConvertToArrayBased*, která vrací strom TrieInRAM se stejnými daty.
 
