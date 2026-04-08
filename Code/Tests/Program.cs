@@ -1,5 +1,7 @@
 using BiblioTrieca;
 using System.ComponentModel.Design;
+using log4net.Config;
+using System.IO;
 
 namespace Tests
 {
@@ -665,6 +667,7 @@ namespace Tests
         }
         static void Main(string[] args)
         {
+            XmlConfigurator.Configure(new FileInfo("log4net.config"));
             Console.ForegroundColor = ConsoleColor.White;
             TrieInFileTests();
             TrieInRamTests();

@@ -1,5 +1,7 @@
 ﻿using System.Drawing;
 using System.IO;
+using log4net;
+using System.Reflection;
 
 namespace BiblioTrieca
 {
@@ -17,6 +19,9 @@ namespace BiblioTrieca
     //Holds records in file, some methods require something like log(keysize) memory in RAM (garbagecollect, autocomplete...)
     //Includes simple cache, which is recommended, but due to prefix trees works very fast even without it
     {
+        //added for sw dev tools class
+        private static readonly ILog log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+
         uint recordLength;
         //(26 chars + 10 numericals + space) * 4B + activation Byte + 107B data = 256 B
 
@@ -56,19 +61,32 @@ namespace BiblioTrieca
                 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ' '];
                 emptyRecord = new byte[this.recordLength];
             }
-            if (File.Exists(adress))
+
+            try
             {
-                this.nmbRecordsInDB = (uint)new System.IO.FileInfo(adress).Length / recordLength - 1;
+                if (File.Exists(adress))
+                {
+                    this.nmbRecordsInDB = (uint)new System.IO.FileInfo(adress).Length / recordLength - 1;
+                    log.Info($"Existing trie loaded from disc: {adress}. Nmb of entries: {nmbRecordsInDB}");
+                }
+                else
+                {
+                    this.nmbRecordsInDB = 0;
+                    FileStream fileStream = new FileStream(adress, FileMode.OpenOrCreate, FileAccess.Write);
+                    BinaryWriter writer = new BinaryWriter(fileStream);
+                    writer.Write(emptyRecord);
+                    writer.Close();
+                    fileStream.Close();
+
+                    log.Info($"New trie created in file: {adress}.");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                this.nmbRecordsInDB = 0;
-                FileStream fileStream = new FileStream(adress, FileMode.OpenOrCreate, FileAccess.Write);
-                BinaryWriter writer = new BinaryWriter(fileStream);
-                writer.Write(emptyRecord);
-                writer.Close();
-                fileStream.Close();
+                log.Fatal($"Critical error when loading trie from file: {adress}.", ex);
+                throw;
             }
+
             if (cacheSize != 0)
             {
                 cacheKeys = new string[cacheSize];
@@ -115,6 +133,7 @@ namespace BiblioTrieca
                 {
                     return (c + 4);
                 }
+                log.Error($"Invalid character usage: '{c}'");
                 throw new Exception("invalid character in key");
             }
         }
@@ -219,6 +238,7 @@ namespace BiblioTrieca
             }
             else
             {
+                log.Error($"Too big data for a key '{key}'. Size: {data.Length}B.");
                 throw new Exception("Not enough space in record, potentional data overflow");
             }
             
